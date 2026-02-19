@@ -58,6 +58,12 @@ cargo build --release
 sudo mv ./target/release/syntropy /usr/local/bin/
 ```
 
+or
+
+```bash
+cargo install syntropy
+```
+
 ### Initialize Plugin Environment
 
 ```bash
