@@ -15,6 +15,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag is on main branch
+        run: |
+          if ! git branch -r --contains ${{ github.sha }} | grep -q 'origin/main'; then
+            echo "::error::Tag must be on main branch. Current tag is not reachable from origin/main"
+            exit 1
+          fi
+          echo "Tag is on main branch ✓"
 
       - name: Validate tag matches Cargo.toml version
         run: |
@@ -81,6 +91,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --current --strip header
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -93,22 +112,27 @@ jobs:
         run: |
           gh release create ${{ github.ref_name }} \
             --title "Syntropy ${{ github.ref_name }}" \
-            --notes "See [CHANGELOG.md](CHANGELOG.md) for details" \
+            --notes "${{ steps.changelog.outputs.content }}" \
             artifacts/*/* \
             --draft=false \
             --prerelease=false
 
-  # TODO: Uncomment when ready to publish to crates.io
-  # publish:
-  #   name: Publish to crates.io
-  #   needs: release
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Setup Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
-  #
-  #     - name: Publish to crates.io
-  #       run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
+  publish:
+    name: Publish to crates.io
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Dry run publish
+        run: cargo publish --dry-run
+
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
