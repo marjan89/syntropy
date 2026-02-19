@@ -98,17 +98,23 @@ jobs:
             --draft=false \
             --prerelease=false
 
-  # TODO: Uncomment when ready to publish to crates.io
-  # publish:
-  #   name: Publish to crates.io
-  #   needs: release
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Setup Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
-  #
-  #     - name: Publish to crates.io
-  #       run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
+  publish:
+    name: Publish to crates.io
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Dry run publish
+        run: cargo publish --dry-run
+
+      # Actual publish disabled for testing
+      # - name: Publish to crates.io
+      #   run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
