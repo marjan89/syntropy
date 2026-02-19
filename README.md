@@ -1,7 +1,7 @@
 # Syntropy
 
 [![CI](https://github.com/marjan89/syntropy/workflows/CI/badge.svg)](https://github.com/marjan89/syntropy/actions)
-[![Release](https://img.shields.io/github/v/release/marjan89/syntropy)](https://github.com/marjan89/syntropy/releases)
+[![Crates.io](https://img.shields.io/crates/v/syntropy)](https://crates.io/crates/syntropy)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > [!WARNING]
