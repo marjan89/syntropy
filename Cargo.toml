@@ -1,0 +1,67 @@
+[package]
+name = "syntropy"
+version = "0.4.4"
+edition = "2024"
+description = "Syntropy is a TUI tool boasting a fleshed out, neovim like, plugin framework. It's mainly envisioned to work with handling data, maintenance tasks, etc. It also supports a CLI tools for use with scripting. If you wire it up with a hotkey it can replace your dmenu too!"
+repository = "https://github.com/marjan89/syntropy"
+license = "MIT"
+keywords = ["tui", "orchestration", "plugin"]
+categories = ["command-line-utilities", "configuration"]
+readme = "README.md"
+homepage = "https://github.com/marjan89/syntropy"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lib]
+name = "syntropy"
+path = "src/lib.rs"
+
+[[bin]]
+name = "syntropy"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4.5"
+crossterm = "0.29"
+dirs = "6.0"
+ratatui = "0.30"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde-inline-default = "1.0.0"
+serde_json = "1.0"
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "process",
+  "sync",
+  "io-util",
+  "fs",
+  "time",
+  "macros",
+] }
+toml = "0.9"
+unicode-width = "0.2"
+mlua = { version = "0.11.5", features = ["lua54", "vendored", "async", "send"] }
+anyhow = "1.0.100"
+tui-input = "0.15"
+fuzzy-matcher = "0.3.7"
+indexmap = "2.0"
+semver = "1.0"
+shellexpand = "3.1"
+
+[dev-dependencies]
+tempfile = "3.8"
+assert_cmd = "2.1"
+predicates = "3.0"
+serial_test = "3.0"
+
+[lints.clippy]
+too_many_arguments = "allow"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,11 @@
+mod colors_fallback_test;
+mod colors_parsing_test;
+mod events_test;
+mod execute_test;
+mod exit_code_test;
+mod fuzzy_searcher_test;
+mod keybind_test;
+mod navigator_test;
+mod paths_test;
+mod plugin_declaration_test;
+mod tag_parsing_test;

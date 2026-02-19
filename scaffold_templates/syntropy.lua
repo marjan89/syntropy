@@ -1,0 +1,59 @@
+---@meta
+
+---@class Syntropy
+---@field shell fun(cmd: string): string, integer Execute shell command, returns output and exit code
+---@field invoke_tui fun(command: string, args: string[]): integer Launch external TUI app with full terminal control, returns exit code
+---@field invoke_editor fun(path: string): integer Open file in $EDITOR (or $VISUAL, or vim), returns exit code
+---@field expand_path fun(path: string): string Expand ~, env vars, and ./ (plugin-relative) in paths
+---
+--- **syntropy.shell(cmd):**
+--- Executes a shell command and returns the output and exit code.
+--- - Async function (blocks until command completes)
+--- - Uses `sh -c` to support pipes, redirects, and other shell features
+--- - Returns: (output: string, exit_code: integer)
+--- - Output combines stdout and stderr
+--- - Example: `local output, code = syntropy.shell("ls -la | grep .lua")`
+---
+--- **syntropy.invoke_tui(command, args):**
+--- Runs an external TUI application with full terminal control.
+--- - Async function (blocks until the external application exits)
+--- - In TUI mode: suspends syntropy's TUI, gives full terminal to external app, then restores syntropy's TUI
+--- - In CLI mode: runs command directly with inherited stdin/stdout/stderr
+--- - The plugin execution pauses and resumes exactly where it left off (all state preserved)
+--- - Parameters:
+---   - command: string - The command/program to execute
+---   - args: string[] - Array of arguments (as Lua table)
+--- - Returns: exit_code: integer (clamped to valid POSIX range 0-255)
+--- - Examples:
+---   `local code = syntropy.invoke_tui("fzf", {"--multi", "--preview", "cat {}"})`
+---   `local code = syntropy.invoke_tui("htop", {})`
+---   `local code = syntropy.invoke_tui("ranger", {"/home/user/documents"})`
+---
+--- **syntropy.invoke_editor(path):**
+--- Opens a file in the user's configured editor.
+--- - Async function (blocks until the editor exits)
+--- - Convenience wrapper that uses $EDITOR (falls back to $VISUAL, then vim)
+--- - In TUI mode: suspends syntropy's TUI, gives full terminal to editor, then restores syntropy's TUI
+--- - In CLI mode: runs editor directly with inherited stdin/stdout/stderr
+--- - The plugin execution pauses and resumes exactly where it left off (all state preserved)
+--- - Parameters:
+---   - path: string - Path to the file to edit
+--- - Returns: exit_code: integer (clamped to valid POSIX range 0-255)
+--- - Examples:
+---   `local code = syntropy.invoke_editor("/tmp/notes.txt")`
+---   `local code = syntropy.invoke_editor(syntropy.expand_path("./config.json"))`
+---
+--- **syntropy.expand_path(path):**
+--- Expands paths with special handling for ~, environment variables, and plugin-relative paths.
+--- - Synchronous function (non-blocking)
+--- - Path expansion rules:
+---   - "~/file" -> "$HOME/file"
+---   - "$VAR/file" -> expands environment variable
+---   - "./file" -> "<plugin-directory>/file" (relative to calling script)
+---   - "../file" -> "<plugin-parent-directory>/file" (relative to calling script)
+---   - "file" -> "file" (unchanged)
+--- - Examples:
+---   `local config = syntropy.expand_path("~/.config/app/config.toml")`
+---   `local data = syntropy.expand_path("./plugin-data.json")  -- plugin's directory`
+
+syntropy = {}

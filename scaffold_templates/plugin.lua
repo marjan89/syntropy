@@ -1,0 +1,102 @@
+---@meta
+
+---@class Metadata
+---@field icon string? Icon for the plugin
+---@field name string Plugin name (required)
+---@field version string Plugin version (required)
+---@field description string? Plugin description (optional)
+---@field platforms string[]? Supported platforms (e.g., "macos", "linux") (optional)
+
+---@class MetadataOverride
+---@field icon string? Override icon
+---@field name string Plugin name (required - must match base plugin)
+---@field version string? Override version
+---@field description string? Override description
+---@field platforms string[]? Override platforms
+
+---@class ItemSource
+---@field tag string Short tag used for UI display when multiple item sources exist
+---@field items fun(): string[] Returns the list of items for this item source
+---@field preselected_items? fun(): string[] Optional: Returns the list of preselected items
+---@field preview? fun(item: string): string Optional: Returns preview content for the given item
+---@field execute? fun(items: string[]): string, integer Optional: Executes the task for the given items, returns output and exit code
+
+---@alias Mode "multi"|"none"
+
+---@class Task
+---@field name string Display name for this task
+---@field description string Description of what this task does (displayed in preview pane)
+---@field mode? Mode Optional: Selection mode - "multi" or "none" (default)
+---@field exit_on_execute? boolean Optional: Whether to exit after executing this task
+---@field execution_confirmation_message? string Optional: If set, shows a confirmation modal with this message before executing. User must confirm to proceed.
+---@field suppress_success_notification? boolean Optional: If true, suppresses the success modal after execution (errors are still shown). Useful with invoke_editor and invoke_tui. Default: false.
+---@field item_polling_interval? integer Optional: Milliseconds between item cache refreshes (0 = no polling, default: 0)
+---@field preview_polling_interval? integer Optional: Milliseconds between preview cache refreshes (0 = no polling, default: 0)
+---@field item_sources table<string, ItemSource>? Map of item source key to ItemSource. If no item_sources are declared this task is considered as executable only and requires task level `execute` function to be declared.
+---@field pre_run? fun() Optional: Runs before items are fetched
+---@field post_run? fun() Optional: Runs after execution completes
+---@field preview? fun(item: string): string Optional: Returns preview content for the given item (task-level fallback)
+---@field execute? fun(items: string[]): string, integer Optional: Executes the task for the given items (task-level fallback), returns output and exit code. This function needs to be declared if no `item_sources` are declared for this task.
+
+---@class PluginDefinition
+---@field metadata Metadata Plugin metadata
+---@field tasks table<string, Task> Map of task key to Task definition
+
+---@class PluginOverride
+---@field metadata MetadataOverride? Optional: Override plugin metadata (only name is required, other fields optional)
+---@field tasks table<string, Task>? Optional: Override or add specific tasks
+
+---Example usage in plugin.lua files:
+---
+---## BASE PLUGIN (standalone or in data directory)
+---Use PluginDefinition - requires metadata and tasks:
+---
+---```lua
+------@type PluginDefinition
+---local plugin = {
+---    metadata = {
+---        icon = "󰊦",
+---        name = "example",
+---        version = "1.0.0",
+---        description = "Example plugin",
+---        platforms = { "macos" },
+---    },
+---    tasks = {
+---        my_task = {
+---            name = "My Task",
+---            description = "Performs a specific task with items",
+---            mode = "multi",
+---            item_sources = {
+---                source1 = {
+---                    tag = "s1",
+---                    items = function() return {} end,
+---                },
+---            },
+---        },
+---    },
+---}
+---
+---return plugin
+---```
+---
+---## OVERRIDE PLUGIN (in config directory)
+---Use PluginOverride - all fields optional, only specify what you want to override:
+---
+---```lua
+------@type PluginOverride
+---local plugin = {
+---    metadata = {
+---        icon = "🔧",  -- Just override the icon
+---        name = "example",  -- Must match base plugin name
+---    },
+---    -- No tasks = inherit all tasks from base plugin
+---    -- Or override specific tasks:
+---    -- tasks = {
+---    --     my_task = {
+---    --         description = "Custom description",  -- Override just the description
+---    --     },
+---    -- },
+---}
+---
+---return plugin
+---```
