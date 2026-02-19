@@ -15,6 +15,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag is on main branch
+        run: |
+          if ! git branch -r --contains ${{ github.sha }} | grep -q 'origin/main'; then
+            echo "::error::Tag must be on main branch. Current tag is not reachable from origin/main"
+            exit 1
+          fi
+          echo "Tag is on main branch ✓"
 
       - name: Validate tag matches Cargo.toml version
         run: |
@@ -81,6 +91,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --current --strip header
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -93,7 +112,7 @@ jobs:
         run: |
           gh release create ${{ github.ref_name }} \
             --title "Syntropy ${{ github.ref_name }}" \
-            --notes "See [CHANGELOG.md](CHANGELOG.md) for details" \
+            --notes "${{ steps.changelog.outputs.content }}" \
             artifacts/*/* \
             --draft=false \
             --prerelease=false
@@ -115,6 +134,5 @@ jobs:
       - name: Dry run publish
         run: cargo publish --dry-run
 
-      # Actual publish disabled for testing
-      # - name: Publish to crates.io
-      #   run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
