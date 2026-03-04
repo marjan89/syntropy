@@ -41,7 +41,7 @@ return {
         version = "1.0.0",
         icon = "T",
         description = "Test plugin",
-        platforms = {"macos"}
+        platforms = {"macos", "linux"}
     },
     tasks = {
         negative = {
@@ -76,7 +76,7 @@ fn test_exit_code_over_255_clamped_to_255() {
     // Plugin returns 300, should be clamped to 255
     const LARGE_EXIT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos", "linux"}},
     tasks = {
         large = {
             description = "Returns large exit code",
@@ -110,7 +110,7 @@ fn test_exit_code_valid_range_unchanged() {
     // Plugin returns 42, should pass through unchanged
     const VALID_EXIT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos", "linux"}},
     tasks = {
         valid = {
             description = "Returns valid exit code",
@@ -142,7 +142,7 @@ fn test_exit_code_zero_success() {
     // Plugin returns 0, should pass through as success
     const SUCCESS_EXIT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos", "linux"}},
     tasks = {
         success = {
             description = "Returns success",
@@ -174,7 +174,7 @@ fn test_exit_code_item_source_execute_clamped() {
     // Item source execute() also needs clamping
     const ITEM_SOURCE_EXIT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", description = "Test plugin", platforms = {"macos", "linux"}},
     tasks = {
         items = {
             description = "Item source with invalid exit code",

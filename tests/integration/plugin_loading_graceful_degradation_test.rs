@@ -40,7 +40,7 @@ return {
         version = "1.0.0",
         icon = "V",
         description = "Valid plugin",
-        platforms = {"macos"}
+        platforms = {"macos", "linux"}
     },
     tasks = {
         test = {

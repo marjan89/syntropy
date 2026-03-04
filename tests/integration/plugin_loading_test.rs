@@ -267,7 +267,7 @@ return {
     metadata = {
         description = "Test task",
         name = "arrays",
-        platforms = {"macos"},
+        platforms = {"macos", "linux"},
     },
     tasks = {t = {description = "Test task", execute = function() return "", 0 end}}
 }
@@ -277,9 +277,8 @@ return {
 
     // Array merge works correctly - override replaces base
     // Verified: deep_merge() properly detects arrays and replaces them
-    assert_eq!(plugins[0].metadata.platforms, vec!["macos"]);
-    // Verify base values (linux, windows) are NOT present - array was replaced, not merged
-    assert!(!plugins[0].metadata.platforms.contains(&"linux".to_string()));
+    assert_eq!(plugins[0].metadata.platforms, vec!["macos", "linux"]);
+    // Verify base value (windows) is NOT present - array was replaced, not merged
     assert!(
         !plugins[0]
             .metadata

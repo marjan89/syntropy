@@ -39,7 +39,7 @@ fn test_all_sources_succeed() {
     // Baseline test: verify normal operation when all sources succeed
     const ALL_SUCCESS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         baseline = {
             description = "Baseline test",
@@ -121,7 +121,7 @@ fn test_first_source_fails() {
     // When first source items() fails, remaining sources should still provide items
     const FIRST_FAILS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         first_fails = {
             description = "First source fails",
@@ -201,7 +201,7 @@ fn test_middle_source_fails() {
     // When middle source items() fails, first and last sources should still work
     const MIDDLE_FAILS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         middle_fails = {
             description = "Middle source fails",
@@ -281,7 +281,7 @@ fn test_last_source_fails() {
     // When last source items() fails, earlier sources should still work
     const LAST_FAILS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         last_fails = {
             description = "Last source fails",
@@ -365,7 +365,7 @@ fn test_multiple_failures_one_success() {
     // When multiple sources fail, the one successful source should still work
     const MULTIPLE_FAIL: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         multi_fail = {
             description = "Multiple failures",
@@ -445,7 +445,7 @@ fn test_all_sources_fail() {
     // When ALL sources fail, the operation should fail (no partial results to return)
     const ALL_FAIL: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         all_fail = {
             description = "All sources fail",
@@ -522,7 +522,7 @@ fn test_mixed_empty_fail_success() {
     // Empty arrays should be treated as valid (just no items), not failures
     const MIXED: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         mixed = {
             description = "Mixed scenarios",
@@ -607,7 +607,7 @@ fn test_all_sources_empty_items() {
     // This is different from test_all_sources_fail which returns errors
     const ALL_EMPTY_ITEMS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         all_empty = {
             description = "All sources empty",

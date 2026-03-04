@@ -43,7 +43,7 @@ fn test_execute_multisource_all_sources_succeed() {
     // Baseline test: verify normal operation when all sources execute successfully
     const ALL_SUCCESS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         baseline = {
             description = "Baseline test",
@@ -127,7 +127,7 @@ fn test_execute_multisource_first_source_fails() {
     // and their outputs should be preserved
     const FIRST_FAILS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         first_fails = {
             description = "First execute fails",
@@ -205,7 +205,7 @@ fn test_execute_multisource_middle_source_fails() {
     // and last source should still execute
     const MIDDLE_FAILS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         middle_fails = {
             description = "Middle execute fails",
@@ -277,7 +277,7 @@ fn test_execute_multisource_last_source_fails() {
     // When last source execute() fails, earlier source outputs should be preserved
     const LAST_FAILS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         last_fails = {
             description = "Last execute fails",
@@ -353,7 +353,7 @@ fn test_execute_multisource_multiple_failures() {
     // When multiple sources fail, successful source outputs should still be collected
     const MULTIPLE_FAIL: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         multi_fail = {
             description = "Multiple execute failures",
@@ -445,7 +445,7 @@ fn test_execute_multisource_failure_still_calls_post_run() {
     let plugin_content = format!(
         r#"
 return {{
-    metadata = {{name = "test", version = "1.0.0", icon = "T", platforms = {{"macos"}}}},
+    metadata = {{name = "test", version = "1.0.0", icon = "T", platforms = {{"macos", "linux"}}}},
     tasks = {{
         cleanup_test = {{
             description = "Cleanup test",
@@ -538,7 +538,7 @@ fn test_execute_multisource_mixed_exit_codes() {
     // Verify that when sources have different exit codes, the first non-zero is returned
     const MIXED_EXIT_CODES: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         mixed_codes = {
             description = "Mixed exit codes",

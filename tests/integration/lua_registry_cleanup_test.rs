@@ -49,7 +49,7 @@ fn create_probe_plugin(
     let plugin_content = format!(
         r#"
 return {{
-    metadata = {{name = "{}", version = "1.0.0", icon = "P", platforms = {{"macos"}}}},
+    metadata = {{name = "{}", version = "1.0.0", icon = "P", platforms = {{"macos", "linux"}}}},
     tasks = {{
         {} = {{
             description = "Probe task for registry state",
@@ -78,7 +78,7 @@ fn create_items_error_plugin(fixture: &TestFixture, plugin_name: &str, task_name
     let plugin_content = format!(
         r#"
 return {{
-    metadata = {{name = "{}", version = "1.0.0", icon = "E", platforms = {{"macos"}}}},
+    metadata = {{name = "{}", version = "1.0.0", icon = "E", platforms = {{"macos", "linux"}}}},
     tasks = {{
         {} = {{
             description = "Task with failing items()",
@@ -104,7 +104,7 @@ fn create_execute_error_plugin(fixture: &TestFixture, plugin_name: &str, task_na
     let plugin_content = format!(
         r#"
 return {{
-    metadata = {{name = "{}", version = "1.0.0", icon = "E", platforms = {{"macos"}}}},
+    metadata = {{name = "{}", version = "1.0.0", icon = "E", platforms = {{"macos", "linux"}}}},
     tasks = {{
         {} = {{
             description = "Task with failing execute()",
@@ -135,7 +135,7 @@ fn create_preview_error_plugin(fixture: &TestFixture, plugin_name: &str, task_na
     let plugin_content = format!(
         r#"
 return {{
-    metadata = {{name = "{}", version = "1.0.0", icon = "E", platforms = {{"macos"}}}},
+    metadata = {{name = "{}", version = "1.0.0", icon = "E", platforms = {{"macos", "linux"}}}},
     tasks = {{
         {} = {{
             description = "Task with failing preview()",
@@ -368,7 +368,7 @@ fn test_expand_path_sees_correct_plugin_after_error() {
     // Plugin A: calls expand_path then errors
     let plugin_a_content = r#"
 return {
-    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos"}},
+    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos", "linux"}},
     tasks = {
         fail_after_expand = {
             description = "Calls expand_path then fails",
@@ -420,7 +420,7 @@ fn test_expand_path_in_pre_run_execute_post_run() {
     let plugin_content = format!(
         r#"
 return {{
-    metadata = {{name = "plugin_a", version = "1.0.0", icon = "A", platforms = {{"macos"}}}},
+    metadata = {{name = "plugin_a", version = "1.0.0", icon = "A", platforms = {{"macos", "linux"}}}},
     tasks = {{
         hooks_test = {{
             description = "Test expand_path in all hooks",
@@ -480,7 +480,7 @@ fn test_expand_path_in_item_sources_execute_context() {
     // Plugin A: Multi-source with expand_path in item_sources.execute()
     let plugin_a_content = r#"
 return {
-    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos"}},
+    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos", "linux"}},
     tasks = {
         expand_in_source_execute = {
             description = "Calls expand_path in item_sources.execute",
@@ -540,7 +540,7 @@ fn test_registry_cleanup_when_post_run_fails() {
     // Plugin A: execute succeeds, post_run fails
     let plugin_a_content = r#"
 return {
-    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos"}},
+    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos", "linux"}},
     tasks = {
         post_run_fails = {
             description = "post_run fails",
@@ -583,7 +583,7 @@ fn test_registry_state_after_pre_run_failure() {
     // Plugin A: pre_run fails
     let plugin_a_content = r#"
 return {
-    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos"}},
+    metadata = {name = "plugin_a", version = "1.0.0", icon = "A", platforms = {"macos", "linux"}},
     tasks = {
         pre_run_fails = {
             description = "pre_run fails",

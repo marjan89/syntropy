@@ -37,7 +37,7 @@ return {
         version = "1.0.0",
         icon = "T",
         description = "Test",
-        platforms = {"macos"},
+        platforms = {"macos", "linux"},
     },
     tasks = {
         test_task = {
@@ -58,7 +58,7 @@ return {
 
 const PLUGIN_WITH_PRESELECTION: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         selective = {
             description = "Test task",
@@ -79,7 +79,7 @@ return {
 
 const PLUGIN_EMPTY_PRESELECTION: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         all_items = {
             description = "Test task",
@@ -99,7 +99,7 @@ return {
 
 const STANDALONE_TASK: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         standalone = {
             description = "Test task",
@@ -112,7 +112,7 @@ return {
 
 const FAILING_TASK: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         failing = {
             description = "Test task",
@@ -325,7 +325,7 @@ fn execute_propagates_exit_code_2_from_lua() {
     // Test that exit code 2 (common for command line syntax errors) propagates correctly
     const EXIT_CODE_2_TASK: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         exit_2 = {
             description = "Test task",
@@ -359,7 +359,7 @@ fn execute_propagates_exit_code_127_from_lua() {
     // Test that exit code 127 (command not found) propagates correctly
     const EXIT_CODE_127_TASK: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         exit_127 = {
             description = "Test task",
@@ -393,7 +393,7 @@ fn execute_propagates_first_nonzero_exit_code_from_multisource() {
     // Test that when multiple item sources exist, first non-zero exit code wins
     const MULTISOURCE_MIXED_EXIT_CODES: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         mixed = {
             description = "Test task",
@@ -444,7 +444,7 @@ fn execute_with_negative_exit_code() {
 
     const NEGATIVE_EXIT_CODE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         negative = {
             description = "Test task",
@@ -495,7 +495,7 @@ fn execute_with_exit_code_greater_than_255() {
 
     const LARGE_EXIT_CODE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         large_code = {
             description = "Test task",
@@ -610,7 +610,7 @@ fn execute_with_empty_items_array() {
     // This is the correct behavior - empty items should skip execution entirely
     const EMPTY_ITEMS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         empty = {
             description = "Test task",
@@ -651,7 +651,7 @@ return {
 fn execute_with_items_function_error() {
     const ITEMS_ERROR: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         broken_items = {
             description = "Test task",
@@ -691,7 +691,7 @@ return {
 fn execute_with_preselected_items_error() {
     const PRESELECTED_ERROR: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         broken_preselect = {
             description = "Test task",
@@ -733,7 +733,7 @@ return {
 fn execute_with_lua_runtime_error() {
     const RUNTIME_ERROR: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         runtime_error = {
             description = "Test task",
@@ -776,7 +776,7 @@ return {
 fn execute_propagates_zero_exit_code() {
     const SUCCESS_TASK: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         success = {
             description = "Test task",
@@ -809,7 +809,7 @@ return {
 fn execute_twice_sequential_state_isolation() {
     const STATEFUL_TASK: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         stateful = {
             description = "Test task",
@@ -878,7 +878,7 @@ return {
 // Mock plugin templates for --items flag testing
 const PLUGIN_MODE_NONE_MULTIPLE_ITEMS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         single_select = {
             description = "Test task",
@@ -898,7 +898,7 @@ return {
 
 const PLUGIN_MODE_NONE_SINGLE_ITEM: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         only_one = {
             description = "Test task",
@@ -918,7 +918,7 @@ return {
 
 const PLUGIN_MULTISOURCE_WITH_TAGS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         multi_source = {
             description = "Test task",
@@ -943,7 +943,7 @@ return {
 
 const PLUGIN_WITH_CASE_VARIATIONS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         case_test = {
             description = "Test task",
@@ -1157,7 +1157,7 @@ fn item_flag_tag_stripped_match_ambiguous_errors() {
     // Tests that ambiguous tag-stripped matches produce clear error
     const AMBIGUOUS_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         ambiguous = {
             description = "Test task",
@@ -1331,7 +1331,7 @@ fn item_flag_with_unicode() {
     // Tests that Unicode item names work correctly
     const UNICODE_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         unicode = {
             description = "Test task",
@@ -1373,7 +1373,7 @@ fn item_flag_with_special_characters() {
     // Tests that special characters in item names are handled safely
     const SPECIAL_CHARS_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         special = {
             description = "Test task",
@@ -1441,7 +1441,7 @@ fn items_flag_comma_separated_with_spaces() {
     // Tests that items with spaces in their names work correctly
     const PLUGIN_WITH_SPACES: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         space_test = {
             description = "Test task",
@@ -1486,7 +1486,7 @@ fn items_flag_comma_separated_with_whitespace_trimming() {
 
     const WHITESPACE_TEST_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         test_task = {
             description = "Test task",
@@ -1630,7 +1630,7 @@ fn items_flag_case_sensitive_match_takes_precedence() {
     // When multiple items exist with different cases (git, Git, GIT), exact match should win
     const CASE_SENSITIVE_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         case_precedence = {
             description = "Test task",
@@ -1702,7 +1702,7 @@ fn items_flag_comma_separated_with_many_items() {
     // Validates that all 50 items are properly validated and executed
     const MANY_ITEMS_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         many = {
             description = "Test task",
@@ -1890,7 +1890,7 @@ fn items_flag_selects_item_with_comma_in_name() {
 
     const COMMA_ITEM_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         comma_test = {
             description = "Test task",
@@ -1937,7 +1937,7 @@ fn items_flag_comma_separated_list_with_item_containing_comma() {
 
     const MIXED_COMMA_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         mixed = {
             description = "Test task",
@@ -1985,7 +1985,7 @@ fn items_flag_selects_item_with_multiple_commas() {
 
     const MULTI_COMMA_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         multi = {
             description = "Test task",
@@ -2030,7 +2030,7 @@ fn items_flag_item_with_comma_and_other_special_chars() {
 
     const COMPLEX_ITEM_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         complex = {
             description = "Test task",
@@ -2076,7 +2076,7 @@ fn items_flag_escaped_comma_preserved_in_item_name() {
     // Tests that \, in input becomes , in the actual item name
     const ESCAPE_TEST_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         escape = {
             description = "Test task",
@@ -2118,7 +2118,7 @@ fn items_flag_escaped_backslash_preserved() {
     // Tests that \\ in input becomes \ in the actual item name
     const BACKSLASH_TEST_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         backslash = {
             description = "Test task",
@@ -2160,7 +2160,7 @@ fn items_flag_mixed_escaped_and_unescaped_commas() {
     // Tests mixed list with both separating commas and escaped commas
     const MIXED_ESCAPE_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         mixed = {
             description = "Test task",
@@ -2205,7 +2205,7 @@ fn items_flag_unescaped_backslash_not_followed_by_comma() {
     // Tests that backslash not followed by comma or backslash is preserved
     const UNESCAPED_BACKSLASH_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         unescaped = {
             description = "Test task",
@@ -2247,7 +2247,7 @@ fn items_flag_trailing_backslash() {
     // Tests that trailing backslash is preserved
     const TRAILING_BACKSLASH_PLUGIN: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         trailing = {
             description = "Test task",
@@ -2291,7 +2291,7 @@ return {
 // Mock plugin templates for preview and produce flag tests
 const PLUGIN_WITH_PREVIEW: &str = r#"
 return {
-    metadata = {name = "preview-test", version = "1.0.0", icon = "P", platforms = {"macos"}},
+    metadata = {name = "preview-test", version = "1.0.0", icon = "P", platforms = {"macos", "linux"}},
     tasks = {
         with_task_preview = {
             description = "Test task",
@@ -2337,7 +2337,7 @@ return {
 
 const MULTISOURCE_PLUGIN_WITH_PREVIEW: &str = r#"
 return {
-    metadata = {name = "multi-preview", version = "1.0.0", icon = "M", platforms = {"macos"}},
+    metadata = {name = "multi-preview", version = "1.0.0", icon = "M", platforms = {"macos", "linux"}},
     tasks = {
         browsers = {
             description = "Test task",
@@ -2364,7 +2364,7 @@ return {
 
 const PLUGIN_WITH_PRESELECTION_TESTS: &str = r#"
 return {
-    metadata = {name = "preselect-test", version = "1.0.0", icon = "S", platforms = {"macos"}},
+    metadata = {name = "preselect-test", version = "1.0.0", icon = "S", platforms = {"macos", "linux"}},
     tasks = {
         selective = {
             description = "Test task",
@@ -2843,7 +2843,7 @@ fn produce_preselection_matches_none() {
 // Mock plugins for error and edge case testing
 const PLUGIN_WITH_ERROR_PREVIEW: &str = r#"
 return {
-    metadata = {name = "error-preview", version = "1.0.0", icon = "E", platforms = {"macos"}},
+    metadata = {name = "error-preview", version = "1.0.0", icon = "E", platforms = {"macos", "linux"}},
     tasks = {
         failing_preview = {
             description = "Test task",
@@ -2863,7 +2863,7 @@ return {
 
 const PLUGIN_WITH_ERROR_ITEMS: &str = r#"
 return {
-    metadata = {name = "error-items", version = "1.0.0", icon = "E", platforms = {"macos"}},
+    metadata = {name = "error-items", version = "1.0.0", icon = "E", platforms = {"macos", "linux"}},
     tasks = {
         failing_items = {
             description = "Test task",
@@ -2882,7 +2882,7 @@ return {
 
 const PLUGIN_WITH_ERROR_PRESELECTED: &str = r#"
 return {
-    metadata = {name = "error-preselect", version = "1.0.0", icon = "E", platforms = {"macos"}},
+    metadata = {name = "error-preselect", version = "1.0.0", icon = "E", platforms = {"macos", "linux"}},
     tasks = {
         failing_preselect = {
             description = "Test task",
@@ -2902,7 +2902,7 @@ return {
 
 const PLUGIN_WITH_NUMBER_PREVIEW: &str = r#"
 return {
-    metadata = {name = "number-preview", version = "1.0.0", icon = "N", platforms = {"macos"}},
+    metadata = {name = "number-preview", version = "1.0.0", icon = "N", platforms = {"macos", "linux"}},
     tasks = {
         number_type = {
             description = "Test task",
@@ -2922,7 +2922,7 @@ return {
 
 const PLUGIN_WITH_EMPTY_ITEMS: &str = r#"
 return {
-    metadata = {name = "empty", version = "1.0.0", icon = "E", platforms = {"macos"}},
+    metadata = {name = "empty", version = "1.0.0", icon = "E", platforms = {"macos", "linux"}},
     tasks = {
         no_items = {
             description = "Test task",
@@ -2941,7 +2941,7 @@ return {
 
 const PLUGIN_WITH_SINGLE_ITEM: &str = r#"
 return {
-    metadata = {name = "single", version = "1.0.0", icon = "S", platforms = {"macos"}},
+    metadata = {name = "single", version = "1.0.0", icon = "S", platforms = {"macos", "linux"}},
     tasks = {
         one_item = {
             description = "Test task",
@@ -2961,7 +2961,7 @@ return {
 
 const PLUGIN_MULTISOURCE_PRESELECTION: &str = r#"
 return {
-    metadata = {name = "multi-preselect", version = "1.0.0", icon = "M", platforms = {"macos"}},
+    metadata = {name = "multi-preselect", version = "1.0.0", icon = "M", platforms = {"macos", "linux"}},
     tasks = {
         tagged_preselect = {
             description = "Test task",
@@ -2987,7 +2987,7 @@ return {
 
 const PLUGIN_WITH_SPECIAL_ITEMS: &str = r#"
 return {
-    metadata = {name = "special", version = "1.0.0", icon = "S", platforms = {"macos"}},
+    metadata = {name = "special", version = "1.0.0", icon = "S", platforms = {"macos", "linux"}},
     tasks = {
         with_newlines = {
             description = "Test task",
