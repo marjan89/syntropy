@@ -9,7 +9,10 @@ use crate::{
         expand_path, get_default_config_dir, get_default_data_dir, load_config, validate_config,
     },
     lua::create_lua_vm,
-    plugins::{ModulePathBuilder, load_plugin, merge_and_validate_plugins, validate_plugin},
+    plugins::{
+        ModulePathBuilder, load_plugin, merge_and_validate_plugins, validate_plugin,
+        validate_plugin_platform, validate_plugin_with_runtime,
+    },
 };
 
 const DEFAULT_PLUGIN_ICON: &str = "⚒";
@@ -196,6 +199,15 @@ pub fn validate_plugin_cli(plugin_path: PathBuf) -> Result<()> {
         )
         .context("Failed to merge and validate plugins")?;
 
+        // Runtime function type validation (requires Tokio runtime for async operations)
+        let validation_runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .context("Failed to create validation runtime")?;
+
+        validation_runtime
+            .block_on(async { validate_plugin_with_runtime(&lua_runtime, &merged_plugin).await })?;
+
         println!(
             "✓ Plugin '{}' (v{}) is valid (merged configuration)",
             merged_plugin.metadata.name, merged_plugin.metadata.version
@@ -211,6 +223,24 @@ pub fn validate_plugin_cli(plugin_path: PathBuf) -> Result<()> {
 
         validate_plugin(&plugin)
             .with_context(|| format!("validation failed for plugin {}", plugin.metadata.name))?;
+
+        validate_plugin_platform(&plugin)
+            .with_context(|| format!("validation failed for plugin {}", plugin.metadata.name))?;
+
+        // Runtime function type validation (requires Tokio runtime for async operations)
+        let validation_runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .context("Failed to create validation runtime")?;
+
+        validation_runtime
+            .block_on(async { validate_plugin_with_runtime(&lua_runtime, &plugin).await })
+            .with_context(|| {
+                format!(
+                    "function type validation failed for plugin {}",
+                    plugin.metadata.name
+                )
+            })?;
 
         println!(
             "✓ Plugin '{}' (v{}) is valid",

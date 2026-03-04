@@ -6,9 +6,9 @@ use tokio::sync::Mutex;
 
 use crate::{
     execution::{
-        call_item_source_execute, call_item_source_items, call_item_source_preselected_items,
-        call_item_source_preview, call_task_execute, call_task_post_run, call_task_pre_run,
-        call_task_preview, has_item_source_execute,
+        EXIT_FAILURE, EXIT_SIGINT, call_item_source_execute, call_item_source_items,
+        call_item_source_preselected_items, call_item_source_preview, call_task_execute,
+        call_task_post_run, call_task_pre_run, call_task_preview, has_item_source_execute,
     },
     plugins::Task,
 };
@@ -55,20 +55,40 @@ pub async fn run_items_pipeline(
 
     let mut joined_items = Vec::new();
     let mut joined_preselected_items = Vec::new();
+    let mut source_errors: Vec<(String, anyhow::Error)> = Vec::new();
 
     ensure!(!item_sources.is_empty(), "No items");
 
     for (item_source_key, item_source) in item_sources {
         let items =
-            call_item_source_items(&lua, &task.plugin_name, &task.task_key, item_source_key)
-                .await?;
-        let preselected_items = call_item_source_preselected_items(
+            match call_item_source_items(&lua, &task.plugin_name, &task.task_key, item_source_key)
+                .await
+            {
+                Ok(items) => items,
+                Err(e) => {
+                    source_errors.push((item_source_key.clone(), e));
+                    continue; // Skip to next source
+                }
+            };
+
+        let preselected_items = match call_item_source_preselected_items(
             &lua,
             &task.plugin_name,
             &task.task_key,
             item_source_key,
         )
-        .await?;
+        .await
+        {
+            Ok(items) => items,
+            Err(e) => {
+                // For single-source tasks, preselected_items errors should be fatal
+                // For multi-source tasks, treat as optional (partial failure handling)
+                if item_sources.len() == 1 {
+                    return Err(e);
+                }
+                Vec::new() // preselected_items is optional for multi-source
+            }
+        };
 
         if item_sources.len() == 1 {
             joined_items.extend(items);
@@ -85,6 +105,16 @@ pub async fn run_items_pipeline(
                     .map(|s| format!("[{}] {}", item_source.tag, s)),
             );
         }
+    }
+
+    // Fail only if ALL sources failed
+    if joined_items.is_empty() && !source_errors.is_empty() {
+        let error_details = source_errors
+            .iter()
+            .map(|(key, e)| format!("  - {}: {:#}", key, e))
+            .collect::<Vec<_>>()
+            .join("\n");
+        bail!("All item sources failed:\n{}", error_details);
     }
 
     Ok((joined_items, joined_preselected_items))
@@ -211,10 +241,12 @@ pub async fn run_execute_pipeline(
     lua: Arc<Mutex<Lua>>,
     task: &Task,
     selected_items: &[String],
+    cancellation: Option<&crate::signal::Cancellation>,
 ) -> Result<(String, i32)> {
     if let Some(item_sources) = &task.item_sources {
         let mut joined_output: Vec<String> = Vec::new();
         let mut final_exit_code = 0;
+        let mut source_errors: Vec<(String, anyhow::Error)> = Vec::new();
         for (item_source_key, item_source) in item_sources {
             let mut tags: HashSet<String> = HashSet::default();
             let items: Vec<String> = selected_items
@@ -238,43 +270,83 @@ pub async fn run_execute_pipeline(
                 continue;
             }
 
+            if let Some(cancel) = cancellation
+                && cancel.is_cancelled()
+            {
+                let _ = call_task_post_run(&lua, &task.plugin_name, &task.task_key).await;
+                return Ok(("Task cancelled\n".to_string(), EXIT_SIGINT));
+            }
+
             ensure!(
                 item_sources.len() == 1 || tags.len() == 1,
                 "Failed to parse tag for items of {}",
                 item_source_key
             );
 
-            let (output, exit_code) = if has_item_source_execute(&lua, task, item_source_key).await
-            {
+            let result = if has_item_source_execute(&lua, task, item_source_key).await {
                 if item_sources.len() > 1
                     && let Some(tag) = tags.into_iter().next()
                     && item_source.tag == tag
                 {
-                    call_item_source_execute(&lua, task, item_source_key, &items).await?
+                    call_item_source_execute(&lua, task, item_source_key, &items).await
                 } else if item_sources.len() == 1 {
-                    call_item_source_execute(&lua, task, item_source_key, &items).await?
+                    call_item_source_execute(&lua, task, item_source_key, &items).await
                 } else {
                     continue;
                 }
             } else {
-                call_task_execute(&lua, task, &items).await?
+                call_task_execute(&lua, task, &items).await
             };
 
-            joined_output.push(output);
-
-            if final_exit_code == 0 && exit_code != 0 {
-                final_exit_code = exit_code;
+            match result {
+                Ok((output, exit_code)) => {
+                    joined_output.push(output);
+                    if final_exit_code == 0 && exit_code != 0 {
+                        final_exit_code = exit_code;
+                    }
+                }
+                Err(e) => {
+                    source_errors.push((item_source_key.clone(), e));
+                    if final_exit_code == 0 {
+                        final_exit_code = EXIT_FAILURE;
+                    }
+                    // Continue to next source (no return/?)
+                }
             }
         }
 
-        call_task_post_run(&lua, &task.plugin_name, &task.task_key).await?;
+        // Always call post_run, regardless of execute results
+        let post_run_result = call_task_post_run(&lua, &task.plugin_name, &task.task_key).await;
 
-        let output = joined_output.join("\n");
-        if output.is_empty() {
-            Ok(("No items were executed".to_string(), 0))
-        } else {
-            Ok((output, final_exit_code))
+        if let Err(e) = post_run_result {
+            if joined_output.is_empty() {
+                return Err(e.context("post_run failed and no output was generated"));
+            }
+            if final_exit_code == 0 {
+                final_exit_code = EXIT_FAILURE;
+            }
         }
+
+        // Determine final result
+        let output = if joined_output.is_empty() {
+            if !source_errors.is_empty() {
+                let error_details = source_errors
+                    .iter()
+                    .map(|(key, e)| format!("  - {}: {:#}", key, e))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                return Err(anyhow::anyhow!(
+                    "All item sources failed:\n{}",
+                    error_details
+                ));
+            } else {
+                "No items were executed".to_string()
+            }
+        } else {
+            joined_output.join("\n")
+        };
+
+        Ok((output, final_exit_code))
     } else {
         call_task_pre_run(&lua, &task.plugin_name, &task.task_key).await?;
         let (output, exit_code) = call_task_execute(&lua, task, &[]).await?;

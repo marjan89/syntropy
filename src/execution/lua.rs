@@ -10,6 +10,21 @@ use crate::{
 };
 use anyhow::{Context, Result};
 
+/// RAII guard that ensures registry cleanup even on task abort.
+/// When dropped, clears __syntropy_current_plugin__ from Lua registry.
+struct RegistryCleanupGuard<'lua> {
+    lua: &'lua mlua::Lua,
+}
+
+impl Drop for RegistryCleanupGuard<'_> {
+    fn drop(&mut self) {
+        // Clean up registry context - ignore errors as this runs during unwind
+        let _ = self
+            .lua
+            .set_named_registry_value("__syntropy_current_plugin__", mlua::Value::Nil);
+    }
+}
+
 pub async fn has_item_source_execute(lua: &SharedLua, task: &Task, source_key: &str) -> bool {
     let lua_guard = lua.lock().await;
 
@@ -51,12 +66,14 @@ pub async fn call_item_source_items(
         .set_named_registry_value("__syntropy_current_plugin__", plugin_name)
         .context("Failed to set current plugin context")?;
 
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
+
     let result: Result<Table> = items_fn
         .call_async(())
         .await
         .with_context(|| format!("Error calling {}()", path.join(".")));
 
-    // Clear plugin context
+    // Clear plugin context (belt-and-suspenders with guard)
     lua_guard
         .set_named_registry_value("__syntropy_current_plugin__", mlua::Value::Nil)
         .context("Failed to clear current plugin context")?;
@@ -84,6 +101,8 @@ pub async fn call_item_source_preselected_items(
 
     // Set current plugin context
     lua_guard.set_named_registry_value("__syntropy_current_plugin__", plugin_name)?;
+
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
 
     let result = match get_optional_lua_function(&lua_guard, path)? {
         Some(func) => {
@@ -127,6 +146,8 @@ pub async fn call_item_source_preview(
 
     lua_guard.set_named_registry_value("__syntropy_current_plugin__", plugin_name)?;
 
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
+
     let result = match get_optional_lua_function(&lua_guard, path)? {
         Some(func) => {
             let res: Result<String> = func
@@ -164,6 +185,8 @@ pub async fn call_item_source_execute(
 
     lua_guard.set_named_registry_value("__syntropy_current_plugin__", task.plugin_name.as_str())?;
 
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
+
     let execute_fn = get_lua_function(&lua_guard, path)?;
     let items_table =
         vec_string_to_lua_table(&lua_guard, selected_items, ItemSource::LUA_FN_NAME_EXECUTE)?;
@@ -189,6 +212,8 @@ pub async fn call_task_pre_run(lua: &SharedLua, plugin_name: &str, task_key: &st
 
     lua_guard.set_named_registry_value("__syntropy_current_plugin__", plugin_name)?;
 
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
+
     let result = match get_optional_lua_function(&lua_guard, path)? {
         Some(func) => func
             .call_async::<()>(())
@@ -212,6 +237,8 @@ pub async fn call_task_post_run(lua: &SharedLua, plugin_name: &str, task_key: &s
     ];
 
     lua_guard.set_named_registry_value("__syntropy_current_plugin__", plugin_name)?;
+
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
 
     let result = match get_optional_lua_function(&lua_guard, path)? {
         Some(func) => func
@@ -241,6 +268,8 @@ pub async fn call_task_preview(
     ];
 
     lua_guard.set_named_registry_value("__syntropy_current_plugin__", plugin_name)?;
+
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
 
     let result = match get_optional_lua_function(&lua_guard, path)? {
         Some(func) => {
@@ -275,6 +304,8 @@ pub async fn call_task_execute(
     ];
 
     lua_guard.set_named_registry_value("__syntropy_current_plugin__", task.plugin_name.as_str())?;
+
+    let _cleanup_guard = RegistryCleanupGuard { lua: &lua_guard };
 
     let execute_fn = get_lua_function(&lua_guard, path)?;
     let items_table =

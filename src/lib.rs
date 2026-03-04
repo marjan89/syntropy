@@ -4,6 +4,7 @@ pub mod configs;
 pub mod execution;
 pub mod lua;
 pub mod plugins;
+pub mod signal;
 pub mod tui;
 
 pub use app::App;

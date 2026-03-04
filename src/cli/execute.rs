@@ -5,8 +5,8 @@ use crate::{
     app::App,
     cli::ExecuteArgs,
     execution::{
-        clamp_exit_code, run_execute_pipeline, run_items_pipeline, run_preview_pipeline,
-        runner::parse_tag,
+        EXIT_SIGINT, clamp_exit_code, run_execute_pipeline, run_items_pipeline,
+        run_preview_pipeline, runner::parse_tag,
     },
     plugins::{Mode, Task},
 };
@@ -344,7 +344,11 @@ fn validate_and_resolve_items(
 /// # Error: mode=none requires --items when multiple items exist
 /// syntropy execute --plugin packages --task export
 /// ```
-pub async fn execute_task_cli(app: App, execute_args: &ExecuteArgs) -> Result<i32> {
+pub async fn execute_task_cli(
+    app: App,
+    execute_args: &ExecuteArgs,
+    cancellation: Option<&crate::signal::Cancellation>,
+) -> Result<i32> {
     let plugin_name = &execute_args.plugin;
     let task_key = &execute_args.task;
 
@@ -491,21 +495,44 @@ pub async fn execute_task_cli(app: App, execute_args: &ExecuteArgs) -> Result<i3
         vec![]
     };
 
-    let (output, exit_code) = run_execute_pipeline(app.lua_runtime.clone(), task, &selected_items)
-        .await
-        .context("Failed to execute task")?;
+    if let Some(cancel) = cancellation
+        && cancel.is_cancelled()
+    {
+        eprintln!("Task cancelled before execution");
+        let _ = crate::execution::call_task_post_run(
+            &app.lua_runtime,
+            &task.plugin_name,
+            &task.task_key,
+        )
+        .await;
+        return Ok(EXIT_SIGINT);
+    }
+
+    let (output, exit_code) =
+        run_execute_pipeline(app.lua_runtime.clone(), task, &selected_items, cancellation)
+            .await
+            .context("Failed to execute task")?;
 
     if !output.is_empty() {
         println!("{}", output);
     }
 
-    let clamped_exit_code = clamp_exit_code(exit_code);
-    if clamped_exit_code != exit_code {
+    let final_exit_code = if let Some(cancel) = cancellation {
+        if cancel.is_cancelled() {
+            EXIT_SIGINT
+        } else {
+            clamp_exit_code(exit_code)
+        }
+    } else {
+        clamp_exit_code(exit_code)
+    };
+
+    if final_exit_code != exit_code && exit_code != EXIT_SIGINT {
         eprintln!(
             "Warning: Exit code {} clamped to {}",
-            exit_code, clamped_exit_code
+            exit_code, final_exit_code
         );
     }
 
-    Ok(clamped_exit_code)
+    Ok(final_exit_code)
 }

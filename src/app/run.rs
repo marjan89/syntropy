@@ -6,11 +6,11 @@ use tokio::{runtime::Builder, sync::Mutex};
 use crate::{
     Config,
     app::App,
-    cli::handle_plugins_command,
     cli::{
         Args, Commands,
         completions::generate_completions,
         execute::execute_task_cli,
+        handle_plugins_command,
         init::create_plugin_scaffold,
         validate::{validate_config_cli, validate_plugin_cli},
     },
@@ -18,8 +18,10 @@ use crate::{
         expand_path, find_config_file, get_default_config_dir, load_config, resolve_plugin_paths,
         validate_config,
     },
+    execution::EXIT_SIGINT,
     lua::create_lua_vm,
     plugins::load_plugins,
+    signal::Cancellation,
     tui::TuiApp,
 };
 
@@ -90,7 +92,34 @@ fn setup_the_environment_and_run(cli_args: &Args) -> Result<()> {
         .context("Failed to create tokio runtime")?;
 
     if let Some(Commands::Execute(execute_args)) = &cli_args.command {
-        let exit_code = runtime.block_on(execute_task_cli(app, execute_args))?;
+        let cancellation = {
+            let cancel = Cancellation::new();
+            let cancel_clone = cancel.clone();
+
+            runtime.spawn(async move {
+                loop {
+                    match tokio::signal::ctrl_c().await {
+                        Ok(()) => {
+                            cancel_clone.request_cancel();
+                            if cancel_clone.should_force_quit() {
+                                std::process::exit(EXIT_SIGINT);
+                            } else {
+                                eprintln!("^C\nCancelling task... running cleanup");
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error installing signal handler: {}", e);
+                            break;
+                        }
+                    }
+                }
+            });
+
+            Some(cancel)
+        };
+
+        let exit_code =
+            runtime.block_on(execute_task_cli(app, execute_args, cancellation.as_ref()))?;
         if exit_code != 0 {
             exit(exit_code);
         }

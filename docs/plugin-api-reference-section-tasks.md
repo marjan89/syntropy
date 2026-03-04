@@ -761,7 +761,8 @@ end
 
 **State Persistence:**
 - Plugins load once at startup and persist until app exit
-- Module-level variables persist across all task executions
+- Module-level variables persist across all task executions within the same plugin
+- Each plugin has isolated module scope (no cross-plugin state leakage)
 - `items()` is called fresh every time (TUI: on screen enter, CLI: before execution)
 - Use `pre_run()` to reset caches and state for fresh data
 
@@ -1244,6 +1245,14 @@ Syntropy distinguishes between two types of failures:
 - Output message shown in modal (TUI) or printed to stdout (CLI)
 - Non-zero codes show red error modal in TUI
 - Allows graceful failure handling with custom user messages
+
+**Multi-Source Failure Behavior:**
+
+When a task has multiple item sources and one fails:
+- Remaining sources continue to execute (partial work preserved)
+- Successful outputs are concatenated and shown to user
+- First non-zero exit code is returned
+- `post_run()` always runs for cleanup, even on failure
 
 #### items() Function Error Handling
 

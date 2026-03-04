@@ -20,6 +20,42 @@ use crate::{
 use tokio::sync::Mutex;
 use unicode_width::UnicodeWidthStr;
 
+const VALID_PLATFORMS: &[&str] = &["macos", "linux", "windows"];
+
+fn reset_package_loaded(lua: &Lua, stdlib_keys: &[String]) -> Result<()> {
+    let package: Table = lua.globals().get("package")?;
+    let loaded: Table = package.get("loaded")?;
+    let keys_to_remove: Vec<String> = loaded
+        .pairs::<Value, Value>()
+        .filter_map(|p| {
+            p.ok().and_then(|(k, _)| {
+                k.as_string()
+                    .and_then(|s| s.to_str().ok())
+                    .map(|s| s.to_string())
+            })
+        })
+        .filter(|k| !stdlib_keys.contains(k))
+        .collect();
+    for key in keys_to_remove {
+        loaded.set(key, Value::Nil)?;
+    }
+    Ok(())
+}
+
+fn current_platform() -> &'static str {
+    #[cfg(target_os = "macos")]
+    return "macos";
+
+    #[cfg(target_os = "linux")]
+    return "linux";
+
+    #[cfg(target_os = "windows")]
+    return "windows";
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    return "unknown";
+}
+
 pub fn load_plugins(
     plugin_paths: &[PathBuf],
     config: &Config,
@@ -102,6 +138,16 @@ pub fn load_plugins(
         .apply(&lua_runtime)
         .context("Failed to configure Lua module paths")?;
 
+    // Snapshot stdlib package.loaded keys before any plugin evaluations
+    let stdlib_loaded_keys: Vec<String> = {
+        let package: Table = lua_runtime.globals().get("package")?;
+        let loaded: Table = package.get("loaded")?;
+        loaded
+            .pairs::<String, Value>()
+            .filter_map(|p| p.ok().map(|(k, _)| k))
+            .collect()
+    };
+
     // PASS 1: Collect all plugin candidates by name
     // This allows us to detect when the same plugin exists in multiple directories
     // Use IndexMap to preserve directory order (config dir before data dir)
@@ -138,8 +184,24 @@ pub fn load_plugins(
             }
 
             // Create candidate by peeking (caches name)
-            let candidate = PluginCandidate::peek(&lua_runtime, lua_plugin_path)
-                .with_context(|| format!("Failed to peek plugin at {:?}", path))?;
+            // Handle peek failures gracefully - skip invalid plugins
+            let candidate = match PluginCandidate::peek(&lua_runtime, lua_plugin_path.clone())
+                .with_context(|| format!("Failed to peek plugin at {:?}", path))
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!(
+                        "⚠ Skipping plugin '{}': {:#}",
+                        path.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("unknown"),
+                        e
+                    );
+                    reset_package_loaded(&lua_runtime, &stdlib_loaded_keys)?;
+                    continue;
+                }
+            };
+            reset_package_loaded(&lua_runtime, &stdlib_loaded_keys)?;
 
             plugin_map
                 .entry(candidate.name.clone())
@@ -152,43 +214,68 @@ pub fn load_plugins(
     let mut plugins: Vec<Plugin> = Vec::new();
 
     for (plugin_name, candidates) in plugin_map {
-        let paths: Vec<PathBuf> = candidates.iter().map(|c| c.path.clone()).collect();
-        let source = PluginSource::from_paths(paths)?;
+        // Wrap entire plugin loading in graceful error handling
+        let plugin_result = (|| -> Result<Plugin> {
+            let paths: Vec<PathBuf> = candidates.iter().map(|c| c.path.clone()).collect();
+            let source = PluginSource::from_paths(paths)?;
 
-        let plugin = if source.needs_merge() {
-            // Evaluate cached contents from candidates
-            let tables: Vec<Table> = candidates
-                .iter()
-                .map(|c| c.evaluate(&lua_runtime))
-                .collect::<Result<Vec<_>>>()?;
+            let plugin = if source.needs_merge() {
+                // Evaluate cached contents from candidates
+                let mut tables: Vec<Table> = Vec::new();
+                for candidate in &candidates {
+                    let table = candidate.evaluate(&lua_runtime)?;
+                    tables.push(table);
+                }
 
-            load_and_merge_plugin(
-                &lua_runtime,
-                &source,
-                &plugin_name,
-                &config.default_plugin_icon,
-                tables,
-            )
-            .with_context(|| format!("Failed to merge plugin '{}'", plugin_name))?
-        } else {
-            // Single source - load normally (existing behavior)
-            let path = match &source {
-                PluginSource::Single(p) => p,
-                _ => unreachable!(),
+                load_and_merge_plugin(
+                    &lua_runtime,
+                    &source,
+                    &plugin_name,
+                    &config.default_plugin_icon,
+                    tables,
+                )
+                .with_context(|| format!("Failed to merge plugin '{}'", plugin_name))?
+            } else {
+                // Single source - load normally (existing behavior)
+                let path = match &source {
+                    PluginSource::Single(p) => p,
+                    _ => unreachable!(),
+                };
+
+                let cached_table = candidates[0].evaluate(&lua_runtime)?;
+
+                load_plugin(
+                    &lua_runtime,
+                    path,
+                    &config.default_plugin_icon,
+                    Some(cached_table),
+                )
+                .with_context(|| {
+                    format!("Failed to load plugin '{}' from {:?}", plugin_name, path)
+                })?
             };
 
-            let cached_table = candidates[0].evaluate(&lua_runtime)?;
+            // Validate structure
+            validate_plugin(&plugin).context("Plugin validation failed")?;
 
-            load_plugin(
-                &lua_runtime,
-                path,
-                &config.default_plugin_icon,
-                Some(cached_table),
-            )
-            .with_context(|| format!("Failed to load plugin '{}' from {:?}", plugin_name, path))?
+            Ok(plugin)
+        })();
+        reset_package_loaded(&lua_runtime, &stdlib_loaded_keys)?;
+
+        // Handle plugin loading result gracefully
+        let plugin = match plugin_result {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("⚠ Skipping plugin '{}': {:#}", plugin_name, e);
+                continue;
+            }
         };
 
-        validate_plugin(&plugin).context("Plugin validation failed")?;
+        // Validate platform compatibility (skip gracefully on incompatibility)
+        if let Err(e) = validate_plugin_platform(&plugin) {
+            eprintln!("⚠ Skipping plugin '{}': {:#}", plugin_name, e);
+            continue;
+        }
 
         plugins.push(plugin);
     }
@@ -578,6 +665,36 @@ fn parse_item_sources(
     }
 }
 
+/// Validates platform compatibility for a plugin
+/// Returns an error if the plugin declares platforms and the current platform is not supported
+pub fn validate_plugin_platform(plugin: &Plugin) -> Result<()> {
+    if !plugin.metadata.platforms.is_empty() {
+        // Check all declared platforms are valid
+        for platform in &plugin.metadata.platforms {
+            ensure!(
+                VALID_PLATFORMS.contains(&platform.as_str()),
+                "Plugin ({}) declares invalid platform '{}' - valid platforms are: {}",
+                plugin.metadata.name,
+                platform,
+                VALID_PLATFORMS.join(", ")
+            );
+        }
+
+        // Check if current platform is supported
+        let current = current_platform();
+        if current != "unknown" {
+            ensure!(
+                plugin.metadata.platforms.iter().any(|p| p == current),
+                "Plugin ({}) does not support current platform '{}' - supported platforms: {}",
+                plugin.metadata.name,
+                current,
+                plugin.metadata.platforms.join(", ")
+            );
+        }
+    }
+    Ok(())
+}
+
 pub fn validate_plugin(plugin: &Plugin) -> Result<()> {
     ensure!(!plugin.metadata.name.is_empty(), "Plugin must have a name");
     ensure!(
@@ -609,28 +726,99 @@ pub fn validate_plugin(plugin: &Plugin) -> Result<()> {
 
     for (task_key, task) in &plugin.tasks {
         if let Some(item_sources) = &task.item_sources {
-            ensure!(
-                item_sources.is_empty()
-                    || item_sources.len() == 1
-                    || item_sources.values().all(|s| !s.tag.is_empty()),
-                "Task ({}) {} has multiple item sources so every item source needs to declare a tag",
-                plugin.metadata.name,
-                task_key
-            )
+            // Validate that multi-source tasks OR multi-mode tasks have non-empty tags
+            if task.mode == Mode::Multi {
+                // Multi mode requires ALL sources to have non-empty tags (for UI consistency)
+                ensure!(
+                    item_sources.values().all(|s| !s.tag.is_empty()),
+                    "Task ({}) {} uses mode='multi' which requires all item sources to declare a non-empty tag",
+                    plugin.metadata.name,
+                    task_key
+                );
+            } else {
+                // For mode=none, only multi-source tasks need non-empty tags
+                ensure!(
+                    item_sources.is_empty()
+                        || item_sources.len() == 1
+                        || item_sources.values().all(|s| !s.tag.is_empty()),
+                    "Task ({}) {} has multiple item sources so every item source needs to declare a tag",
+                    plugin.metadata.name,
+                    task_key
+                );
+            }
+
+            // Validate no duplicate tags in item sources
+            if item_sources.len() > 1 {
+                let mut seen_tags = std::collections::HashSet::new();
+                for source in item_sources.values() {
+                    if !source.tag.is_empty() && !seen_tags.insert(&source.tag) {
+                        bail!(
+                            "Task ({}) {} has duplicate tag '{}' in item sources - each source must have a unique tag",
+                            plugin.metadata.name,
+                            task_key,
+                            source.tag
+                        );
+                    }
+                }
+            }
         }
     }
     Ok(())
 }
 
+/// Validates a plugin with runtime function type checking
+///
+/// This performs deeper validation than `validate_plugin()` by actually calling
+/// plugin functions with mock data to verify return types. Only called during
+/// explicit validation (`syntropy validate --plugin`), not during normal loading.
+pub async fn validate_plugin_with_runtime(lua_runtime: &Lua, plugin: &Plugin) -> Result<()> {
+    // First do structural validation
+    validate_plugin(plugin)?;
+
+    // Access the plugin table from Lua globals
+    let plugin_table: Table = lua_runtime
+        .globals()
+        .get(plugin.metadata.name.as_str())
+        .context("Plugin not found in Lua globals")?;
+
+    let tasks_table: Table = plugin_table
+        .get("tasks")
+        .context("Plugin missing tasks table")?;
+
+    // Validate each task's functions
+    for task_key in plugin.tasks.keys() {
+        let task_table: Table = tasks_table
+            .get(task_key.as_str())
+            .with_context(|| format!("Task '{}' not found in plugin table", task_key))?;
+
+        validate_task_function_types(lua_runtime, &plugin.metadata.name, task_key, &task_table)
+            .await
+            .with_context(|| format!("Function type validation failed for task '{}'", task_key))?;
+    }
+
+    Ok(())
+}
+
 fn validate_task(task_table: &Table, task_key: &str) -> Result<()> {
-    let has_item_sources = task_table.get::<Table>("item_sources").is_ok();
+    let has_item_sources_table = task_table.get::<Table>("item_sources").is_ok();
     let has_execute = task_table
         .get::<mlua::Function>(Task::LUA_FN_NAME_EXECUTE)
         .is_ok();
 
+    // Check if item_sources table exists AND is non-empty
+    let has_valid_item_sources = if has_item_sources_table {
+        let sources_table: Table = task_table.get("item_sources")?;
+        sources_table
+            .pairs::<mlua::Value, mlua::Value>()
+            .next()
+            .is_some()
+    } else {
+        false
+    };
+
     ensure!(
-        has_item_sources || has_execute,
-        "Task '{}' must have either 'item_sources' or 'execute' function",
+        has_valid_item_sources || has_execute,
+        "Task '{}' must have either item_sources with at least one source, or an 'execute' function",
         task_key
     );
 
@@ -640,6 +828,216 @@ fn validate_task(task_table: &Table, task_key: &str) -> Result<()> {
         "Task '{}' must have a 'description' field",
         task_key
     );
+
+    Ok(())
+}
+
+/// Validates that preview() returns String
+async fn validate_preview_return_type(preview_fn: &mlua::Function, context: &str) -> Result<()> {
+    // Call with empty string as mock item
+    match preview_fn.call_async::<mlua::Value>("").await {
+        Ok(value) => {
+            ensure!(
+                value.is_string(),
+                "{} must return a string but returned {}",
+                context,
+                value.type_name()
+            );
+            Ok(())
+        }
+        Err(e) => Err(e).with_context(|| format!("{} validation failed", context)),
+    }
+}
+
+/// Validates that items() returns an array (sequential table)
+async fn validate_items_return_type(items_fn: &mlua::Function, context: &str) -> Result<()> {
+    match items_fn.call_async::<mlua::Value>(()).await {
+        Ok(value) => {
+            let table = value.as_table().with_context(|| {
+                format!(
+                    "{} must return an array but returned {}",
+                    context,
+                    value.type_name()
+                )
+            })?;
+
+            // Check if it's array-like by examining keys
+            // Arrays have sequential integer keys starting at 1
+            // Maps have string or non-sequential keys
+            let mut keys: Vec<i64> = Vec::new();
+
+            // Collect all keys and check their types
+            for pair in table.pairs::<mlua::Value, mlua::Value>() {
+                let (key, _value) = pair?;
+                if let Some(i) = key.as_i64() {
+                    keys.push(i);
+                } else {
+                    bail!(
+                        "{} must return an array with integer keys, not a map with non-integer keys",
+                        context
+                    );
+                }
+            }
+
+            // Verify keys are sequential starting at 1
+            if !keys.is_empty() {
+                keys.sort_unstable();
+                ensure!(
+                    keys[0] == 1,
+                    "{} must return an array with keys starting at 1, found first key: {}",
+                    context,
+                    keys[0]
+                );
+
+                for (idx, &key) in keys.iter().enumerate() {
+                    let expected = (idx + 1) as i64;
+                    ensure!(
+                        key == expected,
+                        "{} must return an array with sequential keys (1, 2, 3, ...), found gap or duplicate at index {}: expected {}, got {}",
+                        context,
+                        idx + 1,
+                        expected,
+                        key
+                    );
+                }
+            }
+
+            Ok(())
+        }
+        Err(e) => Err(e).with_context(|| format!("{} validation failed", context)),
+    }
+}
+
+/// Validates that preselected_items() returns a subset of items()
+///
+/// This is called during `syntropy validate --plugin` to detect preselection mismatches early.
+async fn validate_preselected_items_subset(
+    items_fn: &mlua::Function,
+    preselected_fn: &mlua::Function,
+    task_key: &str,
+    source_key: &str,
+) -> Result<()> {
+    use std::collections::HashSet;
+
+    // Call both functions
+    let items_value = items_fn.call_async::<mlua::Value>(()).await?;
+    let items_table = items_value
+        .as_table()
+        .with_context(|| format!("Item source '{}' items() must return an array", source_key))?;
+
+    let preselected_value = preselected_fn.call_async::<mlua::Value>(()).await?;
+    let preselected_table = preselected_value.as_table().with_context(|| {
+        format!(
+            "Item source '{}' preselected_items() must return an array",
+            source_key
+        )
+    })?;
+
+    // Convert items to HashSet for efficient lookup
+    let mut items_set: HashSet<String> = HashSet::new();
+    for pair in items_table.pairs::<mlua::Value, mlua::Value>() {
+        let (_key, value) = pair?;
+        if let Some(lua_string) = value.as_string()
+            && let Ok(borrowed_str) = lua_string.to_str()
+        {
+            items_set.insert(borrowed_str.as_ref().to_string());
+        }
+    }
+
+    // Check each preselected item is in items
+    let mut invalid_items = Vec::new();
+    for pair in preselected_table.pairs::<mlua::Value, mlua::Value>() {
+        let (_key, value) = pair?;
+        if let Some(lua_string) = value.as_string()
+            && let Ok(borrowed_str) = lua_string.to_str()
+        {
+            let s = borrowed_str.as_ref();
+            if !items_set.contains(s) {
+                invalid_items.push(s.to_string());
+            }
+        }
+    }
+
+    ensure!(
+        invalid_items.is_empty(),
+        "Task '{}' item source '{}': preselected items {:?} not found in items list",
+        task_key,
+        source_key,
+        invalid_items
+    );
+
+    Ok(())
+}
+
+/// Validates function return types for a task by executing them with mock data
+///
+/// This is called only during `syntropy validate --plugin` to detect type mismatches early.
+async fn validate_task_function_types(
+    lua: &Lua,
+    plugin_name: &str,
+    task_key: &str,
+    task_table: &Table,
+) -> Result<()> {
+    // Set plugin context for expand_path() and other context-dependent functions
+    lua.set_named_registry_value("__syntropy_current_plugin__", plugin_name)
+        .context("Failed to set plugin context for validation")?;
+
+    // Skip task-level execute() validation - execute functions have side effects
+    // Structural validation already confirmed execute exists if required
+
+    // Validate task-level preview() if present
+    if let Ok(preview_fn) = task_table.get::<mlua::Function>(Task::LUA_FN_NAME_PREVIEW) {
+        validate_preview_return_type(&preview_fn, &format!("Task '{}' preview()", task_key))
+            .await?;
+    }
+
+    // Validate item sources
+    if let Ok(item_sources_table) = task_table.get::<Table>("item_sources") {
+        for pair in item_sources_table.pairs::<String, Table>() {
+            let (source_key, source_table) = pair?;
+
+            // Validate items() function
+            if let Ok(items_fn) = source_table.get::<mlua::Function>(ItemSource::LUA_FN_NAME_ITEMS)
+            {
+                validate_items_return_type(
+                    &items_fn,
+                    &format!("Item source '{}' items()", source_key),
+                )
+                .await?;
+
+                // Cross-validate preselected_items if present
+                if let Ok(preselected_fn) =
+                    source_table.get::<mlua::Function>(ItemSource::LUA_FN_NAME_PRESELECTED_ITEMS)
+                {
+                    validate_preselected_items_subset(
+                        &items_fn,
+                        &preselected_fn,
+                        task_key,
+                        &source_key,
+                    )
+                    .await?;
+                }
+            }
+
+            // Skip item source execute() validation - execute functions have side effects
+            // Structural validation already confirmed execute exists if required
+
+            // Validate item source preview() if present
+            if let Ok(preview_fn) =
+                source_table.get::<mlua::Function>(ItemSource::LUA_FN_NAME_PREVIEW)
+            {
+                validate_preview_return_type(
+                    &preview_fn,
+                    &format!("Item source '{}' preview()", source_key),
+                )
+                .await?;
+            }
+        }
+    }
+
+    // Clear plugin context after validation
+    lua.set_named_registry_value("__syntropy_current_plugin__", mlua::Value::Nil)
+        .context("Failed to clear plugin context after validation")?;
 
     Ok(())
 }

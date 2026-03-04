@@ -8,7 +8,7 @@ use tokio::task::JoinHandle;
 
 use crate::{
     execution::{
-        RuntimeHandle, SharedLua,
+        RuntimeHandle, SharedLua, clamp_exit_code,
         runner::{run_execute_pipeline, run_items_pipeline, run_preview_pipeline},
     },
     plugins::Task,
@@ -91,9 +91,11 @@ impl Handle {
                 task,
                 selected_items,
             } => {
-                let output = run_execute_pipeline(lua_runtime, task, selected_items).await;
+                let output = run_execute_pipeline(lua_runtime, task, selected_items, None).await;
                 match output {
-                    Ok((output, exit_code)) => ExecutionResult::Output(output, exit_code),
+                    Ok((output, exit_code)) => {
+                        ExecutionResult::Output(output, clamp_exit_code(exit_code))
+                    }
                     Err(output) => ExecutionResult::Error(format!("{:#}", output)),
                 }
             }

@@ -7,7 +7,10 @@ mod plugin_source;
 
 use std::{collections::HashMap, sync::Arc};
 
-pub use loader::{load_plugin, load_plugins, merge_and_validate_plugins, validate_plugin};
+pub use loader::{
+    load_plugin, load_plugins, merge_and_validate_plugins, validate_plugin,
+    validate_plugin_platform, validate_plugin_with_runtime,
+};
 pub use module_path_builder::ModulePathBuilder;
 pub use plugin::{ItemSource, Metadata, Mode, Plugin, Task};
 use plugin_source::PluginSource;

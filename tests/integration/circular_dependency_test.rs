@@ -97,23 +97,9 @@ return {
         lua.clone(),
     );
 
-    // Load-time circular dependencies typically fail
-    // This documents expected behavior
-    assert!(
-        result.is_err(),
-        "Expected circular dependency to cause load error"
-    );
-    let error_msg = format!("{:?}", result.unwrap_err());
-    // Verify error mentions one of the circular modules AND indicates it's a loading issue
-    assert!(
-        (error_msg.contains("module_a") || error_msg.contains("module_b"))
-            && (error_msg.contains("error loading")
-                || error_msg.contains("stack")
-                || error_msg.contains("require")
-                || error_msg.contains("circular")),
-        "Error should mention circular modules and loading/require issue, got: {}",
-        error_msg
-    );
+    // Load-time circular dependencies cause plugin to be skipped gracefully
+    let plugins = result.expect("Should gracefully skip plugin with circular dependency");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -178,11 +164,9 @@ return {
         lua.clone(),
     );
 
-    // Self-circular at load time also fails
-    assert!(
-        result.is_err(),
-        "Expected self-circular dependency to cause load error"
-    );
+    // Self-circular at load time causes graceful skip
+    let plugins = result.expect("Should gracefully skip plugin with self-circular dependency");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -288,11 +272,9 @@ return {
         lua.clone(),
     );
 
-    // Deep circular dependencies at load time fail
-    assert!(
-        result.is_err(),
-        "Expected deep circular dependency to cause load error"
-    );
+    // Deep circular dependencies at load time cause graceful skip
+    let plugins = result.expect("Should gracefully skip plugin with deep circular dependency");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -461,9 +443,7 @@ return {
         lua.clone(),
     );
 
-    // Load-time circular with function references also fails
-    assert!(
-        result.is_err(),
-        "Expected circular dependency with functions to cause load error"
-    );
+    // Load-time circular with function references causes graceful skip
+    let plugins = result.expect("Should gracefully skip plugin with circular dependency");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
