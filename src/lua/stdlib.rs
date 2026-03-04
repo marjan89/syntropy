@@ -1,6 +1,6 @@
 use mlua::{Error as LuaError, Lua, Result as LuaResult, Table as LuaTable};
 use std::{env, process::Stdio};
-use tokio::{io::AsyncBufReadExt, join};
+use tokio::io::AsyncBufReadExt;
 
 use crate::execution::clamp_exit_code;
 use crate::tui::{ExternalTuiRequest, get_tui_sender};
@@ -176,7 +176,8 @@ pub async fn invoke_editor(path: String) -> Result<i32, String> {
 
 /// Executes a shell command asynchronously using tokio.
 /// Uses `sh -c` to support complex shell syntax (pipes, redirects, etc.).
-/// Returns (exit_code, output_lines) on success.
+/// Returns (output, exit_code) on success. Avoids blocking on background
+/// processes (e.g. `cmd &`) by aborting reader tasks after the shell exits.
 pub async fn execute_shell_async(command: &str) -> Result<(String, i32), String> {
     let mut child = tokio::process::Command::new("sh")
         .arg("-c")
@@ -189,36 +190,49 @@ pub async fn execute_shell_async(command: &str) -> Result<(String, i32), String>
     let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
     let stderr = child.stderr.take().ok_or("Failed to capture stderr")?;
 
-    let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
-    let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
 
-    let (stdout_result, stderr_result) = join!(
-        async {
-            let mut lines = Vec::new();
-            while let Some(line) = stdout_lines.next_line().await.transpose() {
-                lines.push(line?);
+    let stdout_task = tokio::spawn({
+        let tx = tx.clone();
+        async move {
+            let mut reader = tokio::io::BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                if tx.send(line).is_err() {
+                    break;
+                }
             }
-            Ok::<Vec<String>, std::io::Error>(lines)
-        },
-        async {
-            let mut lines = Vec::new();
-            while let Some(line) = stderr_lines.next_line().await.transpose() {
-                lines.push(line?);
-            }
-            Ok::<Vec<String>, std::io::Error>(lines)
         }
-    );
+    });
 
-    let mut output = stdout_result.map_err(|e| format!("Failed to read stdout: {}", e))?;
-    output.extend(stderr_result.map_err(|e| format!("Failed to read stderr: {}", e))?);
+    let stderr_task = tokio::spawn(async move {
+        let mut reader = tokio::io::BufReader::new(stderr).lines();
+        while let Ok(Some(line)) = reader.next_line().await {
+            if tx.send(line).is_err() {
+                break;
+            }
+        }
+    });
 
     let status = child
         .wait()
         .await
         .map_err(|e| format!("Failed to wait for command: {}", e))?;
 
-    let exit_code = clamp_exit_code(status.code().unwrap_or(-1));
+    // Brief window to flush any buffered pipe data from the shell
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
+    // Abort reader tasks that may be blocked on background-held pipes
+    stdout_task.abort();
+    stderr_task.abort();
+    let _ = stdout_task.await;
+    let _ = stderr_task.await;
+
+    let mut output = Vec::new();
+    while let Ok(line) = rx.try_recv() {
+        output.push(line);
+    }
+
+    let exit_code = clamp_exit_code(status.code().unwrap_or(-1));
     Ok((output.join("\n"), exit_code))
 }
 

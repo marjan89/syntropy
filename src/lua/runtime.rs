@@ -68,9 +68,19 @@ pub fn create_lua_vm() -> Result<Lua> {
 
     let os_table: Table = lua.globals().get("os")?;
 
-    os_table.raw_remove("exit")?;
+    let blocked_exit = lua.create_function(|_, _: mlua::MultiValue| -> mlua::Result<()> {
+        Err(mlua::Error::external(
+            "os.exit is not available in the plugin sandbox",
+        ))
+    })?;
+    os_table.set("exit", blocked_exit)?;
 
-    os_table.raw_remove("execute")?;
+    let blocked_execute = lua.create_function(|_, _: mlua::MultiValue| -> mlua::Result<()> {
+        Err(mlua::Error::external(
+            "os.execute is not available in the plugin sandbox",
+        ))
+    })?;
+    os_table.set("execute", blocked_execute)?;
 
     register_syntropy_stdlib(&lua)?;
 
@@ -79,6 +89,10 @@ pub fn create_lua_vm() -> Result<Lua> {
     // Inject merge function for plugin override system
     let merge_fn: mlua::Function = lua.load(MERGE_LUA).eval()?;
     lua.globals().set("merge", merge_fn)?;
+
+    // Suppress print() - plugins must not write directly to stdout
+    let noop = lua.create_function(|_, _: mlua::MultiValue| Ok(()))?;
+    lua.globals().set("print", noop)?;
 
     Ok(lua)
 }

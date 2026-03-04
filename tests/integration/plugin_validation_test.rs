@@ -520,6 +520,151 @@ return {
         );
 }
 
+#[test]
+fn test_multi_byte_icon_emoji_rejected() {
+    // Issue 5: Multi-byte emoji icons (🚀 = 2 terminal cells) must be rejected
+    // DESIRED BEHAVIOR: Validation should reject icons wider than 1 terminal cell
+    const EMOJI_ICON: &str = r#"
+return {
+    metadata = {name = "test", version = "1.0.0", icon = "🚀"},
+    tasks = {t = {description = "Test task", execute = function() return "", 0 end}}
+}
+"#;
+
+    let fixture = TestFixture::new();
+    fixture.create_plugin("emoji", EMOJI_ICON);
+
+    let plugin_path = fixture
+        .data_path()
+        .join("syntropy")
+        .join("plugins")
+        .join("emoji")
+        .join("plugin.lua");
+
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .arg("validate")
+        .arg("--plugin")
+        .arg(&plugin_path)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("terminal cell").or(predicate::str::contains("icon")));
+}
+
+#[test]
+fn test_platform_filtering_enforced() {
+    // Issue 4: Plugins declaring incompatible platforms should be filtered
+    // DESIRED BEHAVIOR: On macOS, linux-only plugins should fail validation
+    #[cfg(target_os = "macos")]
+    const LINUX_ONLY: &str = r#"
+return {
+    metadata = {
+        name = "test",
+        version = "1.0.0",
+        platforms = {"linux"}
+    },
+    tasks = {t = {description = "Test task", execute = function() return "", 0 end}}
+}
+"#;
+
+    #[cfg(target_os = "macos")]
+    {
+        let fixture = TestFixture::new();
+        fixture.create_plugin("linux-only", LINUX_ONLY);
+
+        let plugin_path = fixture
+            .data_path()
+            .join("syntropy")
+            .join("plugins")
+            .join("linux-only")
+            .join("plugin.lua");
+
+        // DESIRED: Should fail validation on incompatible platform
+        Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+            .arg("validate")
+            .arg("--plugin")
+            .arg(&plugin_path)
+            .assert()
+            .failure()
+            .stderr(predicate::str::contains("platform").or(predicate::str::contains("macos")));
+    }
+}
+
+#[test]
+fn test_platform_compatible_accepted() {
+    // Positive test: Plugin declaring current platform should validate successfully
+    #[cfg(target_os = "macos")]
+    const MACOS_COMPATIBLE: &str = r#"
+return {
+    metadata = {
+        name = "test",
+        version = "1.0.0",
+        platforms = {"macos"}
+    },
+    tasks = {t = {description = "Test task", execute = function() return "", 0 end}}
+}
+"#;
+
+    #[cfg(target_os = "macos")]
+    {
+        let fixture = TestFixture::new();
+        fixture.create_plugin("macos-compatible", MACOS_COMPATIBLE);
+
+        let plugin_path = fixture
+            .data_path()
+            .join("syntropy")
+            .join("plugins")
+            .join("macos-compatible")
+            .join("plugin.lua");
+
+        // DESIRED: Should validate successfully on compatible platform
+        Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+            .arg("validate")
+            .arg("--plugin")
+            .arg(&plugin_path)
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("is valid"));
+    }
+}
+
+#[test]
+fn test_platform_multi_platform_accepted() {
+    // Positive test: Multi-platform declarations should work if current OS is included
+    #[cfg(target_os = "macos")]
+    const MULTI_PLATFORM: &str = r#"
+return {
+    metadata = {
+        name = "test",
+        version = "1.0.0",
+        platforms = {"linux", "macos", "windows"}
+    },
+    tasks = {t = {description = "Test task", execute = function() return "", 0 end}}
+}
+"#;
+
+    #[cfg(target_os = "macos")]
+    {
+        let fixture = TestFixture::new();
+        fixture.create_plugin("multi-platform", MULTI_PLATFORM);
+
+        let plugin_path = fixture
+            .data_path()
+            .join("syntropy")
+            .join("plugins")
+            .join("multi-platform")
+            .join("plugin.lua");
+
+        // DESIRED: Should validate successfully when current platform is in the list
+        Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+            .arg("validate")
+            .arg("--plugin")
+            .arg(&plugin_path)
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("is valid"));
+    }
+}
+
 // ============================================================================
 // Category 4: Invalid Tasks (4 tests)
 // ============================================================================
@@ -578,9 +723,8 @@ return {
         .arg(&plugin_path)
         .assert()
         .failure()
-        .stderr(predicate::str::contains(
-            "must have either 'item_sources' or 'execute'",
-        ));
+        .stderr(predicate::str::contains("item_sources"))
+        .stderr(predicate::str::contains("execute"));
 }
 
 #[test]
@@ -713,6 +857,42 @@ return {
 }
 
 #[test]
+fn test_empty_item_sources_without_execute_rejected() {
+    // Bug: item_sources = {} without execute() currently passes but should fail
+    // Empty sources means no items, so execute function is required
+    const EMPTY_SOURCES_NO_EXECUTE: &str = r#"
+return {
+    metadata = {name = "test", version = "1.0.0"},
+    tasks = {
+        t = {
+            description = "Test task",
+            item_sources = {}
+        }
+    }
+}
+"#;
+
+    let fixture = TestFixture::new();
+    fixture.create_plugin("empty-no-exec", EMPTY_SOURCES_NO_EXECUTE);
+
+    let plugin_path = fixture
+        .data_path()
+        .join("syntropy")
+        .join("plugins")
+        .join("empty-no-exec")
+        .join("plugin.lua");
+
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .arg("validate")
+        .arg("--plugin")
+        .arg(&plugin_path)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("item_sources"))
+        .stderr(predicate::str::contains("execute"));
+}
+
+#[test]
 fn test_item_source_missing_items_function() {
     //   ensure!(source_table.get::<mlua::Function>("items").is_ok(), "Missing 'items' function");
     const NO_ITEMS_FUNCTION: &str = r#"
@@ -801,6 +981,196 @@ return {
         .assert()
         .failure()
         .stderr(predicate::str::contains("tag"));
+}
+
+#[test]
+fn test_multi_mode_requires_tags_on_all_sources() {
+    // Issue 7: Multi mode tasks must have tags on ALL item sources
+    // DESIRED BEHAVIOR: Even single-source multi mode tasks need tags for UI consistency
+    const MISSING_TAG_MULTI: &str = r#"
+return {
+    metadata = {name = "test", version = "1.0.0"},
+    tasks = {
+        t = {
+            description = "Test task",
+            mode = "multi",
+            item_sources = {
+                src1 = {
+                    tag = "s1",
+                    items = function() return {"a"} end,
+                    execute = function(items) return "ok", 0 end
+                },
+                src2 = {
+                    tag = "",
+                    items = function() return {"b"} end,
+                    execute = function(items) return "ok", 0 end
+                }
+            }
+        }
+    }
+}
+"#;
+
+    let fixture = TestFixture::new();
+    fixture.create_plugin("missing-tag", MISSING_TAG_MULTI);
+
+    let plugin_path = fixture
+        .data_path()
+        .join("syntropy")
+        .join("plugins")
+        .join("missing-tag")
+        .join("plugin.lua");
+
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .arg("validate")
+        .arg("--plugin")
+        .arg(&plugin_path)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("multi").and(predicate::str::contains("tag")));
+}
+
+#[test]
+fn test_duplicate_tags_rejected() {
+    // Issue 8: Duplicate tags in item sources must be rejected
+    // DESIRED BEHAVIOR: Each item source must have a unique tag for routing
+    const DUPLICATE_TAGS: &str = r#"
+return {
+    metadata = {name = "test", version = "1.0.0"},
+    tasks = {
+        t = {
+            description = "Test task",
+            mode = "multi",
+            item_sources = {
+                src1 = {
+                    tag = "pkg",
+                    items = function() return {"a"} end,
+                    execute = function(items) return "ok", 0 end
+                },
+                src2 = {
+                    tag = "pkg",
+                    items = function() return {"b"} end,
+                    execute = function(items) return "ok", 0 end
+                }
+            }
+        }
+    }
+}
+"#;
+
+    let fixture = TestFixture::new();
+    fixture.create_plugin("dup-tags", DUPLICATE_TAGS);
+
+    let plugin_path = fixture
+        .data_path()
+        .join("syntropy")
+        .join("plugins")
+        .join("dup-tags")
+        .join("plugin.lua");
+
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .arg("validate")
+        .arg("--plugin")
+        .arg(&plugin_path)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("duplicate").and(predicate::str::contains("tag")));
+}
+
+#[test]
+fn test_multi_mode_with_tags_accepted() {
+    // Positive test: Multi-mode with proper tags should validate successfully
+    const MULTI_MODE_VALID: &str = r#"
+return {
+    metadata = {name = "test", version = "1.0.0"},
+    tasks = {
+        t = {
+            description = "Test task",
+            mode = "multi",
+            item_sources = {
+                src1 = {
+                    tag = "source1",
+                    items = function() return {"a", "b"} end,
+                    execute = function(items) return "ok", 0 end
+                },
+                src2 = {
+                    tag = "source2",
+                    items = function() return {"c", "d"} end,
+                    execute = function(items) return "ok", 0 end
+                }
+            }
+        }
+    }
+}
+"#;
+
+    let fixture = TestFixture::new();
+    fixture.create_plugin("multi-mode-valid", MULTI_MODE_VALID);
+
+    let plugin_path = fixture
+        .data_path()
+        .join("syntropy")
+        .join("plugins")
+        .join("multi-mode-valid")
+        .join("plugin.lua");
+
+    // DESIRED: Should validate successfully when all sources have unique tags
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .arg("validate")
+        .arg("--plugin")
+        .arg(&plugin_path)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("is valid"));
+}
+
+#[test]
+fn test_none_mode_multiple_sources_tags_optional() {
+    // Clarification test: None mode with multiple sources - are tags required?
+    // This test documents current behavior vs desired behavior
+    const NONE_MODE_MULTI_SOURCE: &str = r#"
+return {
+    metadata = {name = "test", version = "1.0.0"},
+    tasks = {
+        t = {
+            description = "Test task",
+            mode = "none",
+            item_sources = {
+                src1 = {
+                    tag = "s1",
+                    items = function() return {"a"} end,
+                    execute = function(items) return "ok", 0 end
+                },
+                src2 = {
+                    tag = "s2",
+                    items = function() return {"b"} end,
+                    execute = function(items) return "ok", 0 end
+                }
+            }
+        }
+    }
+}
+"#;
+
+    let fixture = TestFixture::new();
+    fixture.create_plugin("none-mode-multi", NONE_MODE_MULTI_SOURCE);
+
+    let plugin_path = fixture
+        .data_path()
+        .join("syntropy")
+        .join("plugins")
+        .join("none-mode-multi")
+        .join("plugin.lua");
+
+    // Current behavior: Multiple sources require tags regardless of mode
+    // This documents that the tag requirement is about source count, not mode
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .arg("validate")
+        .arg("--plugin")
+        .arg(&plugin_path)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("is valid"));
 }
 
 // ============================================================================

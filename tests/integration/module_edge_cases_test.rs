@@ -398,18 +398,9 @@ return {
         lua.clone(),
     );
 
-    // Should fail with clear error
-    assert!(result.is_err());
-    let error_msg = format!("{:?}", result.unwrap_err());
-    // Verify error indicates module loading failure (not just any error)
-    assert!(
-        error_msg.contains("does_not_exist")
-            && (error_msg.contains("not found")
-                || error_msg.contains("no file")
-                || error_msg.contains("error loading")),
-        "Error should mention missing module name and indicate loading failure, got: {}",
-        error_msg
-    );
+    // Should fail and skip gracefully
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]

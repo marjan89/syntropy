@@ -37,7 +37,7 @@ fn mode_none_multisource_only_calls_matching_execute_tag_a() {
     // This is the PRIMARY test for the bug fix
     const TWO_SOURCE_MODE_NONE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         dual = {
             description = "Test task",
@@ -101,7 +101,7 @@ fn mode_none_multisource_only_calls_matching_execute_tag_b() {
     // Verify the opposite direction - selecting tag "cask" item only calls cask execute
     const TWO_SOURCE_MODE_NONE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         dual = {
             description = "Test task",
@@ -165,7 +165,7 @@ fn mode_none_multisource_three_sources_only_one_called() {
     // Verify with 3 sources that only the matching one is called
     const THREE_SOURCE_MODE_NONE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         triple = {
             description = "Test task",
@@ -239,7 +239,7 @@ fn mode_multi_only_calls_sources_with_selected_items() {
     // Verify mode=multi also respects the fix - only sources with selected items execute
     const MULTI_MODE_SELECTIVE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         selective = {
             description = "Test task",
@@ -306,7 +306,7 @@ fn mode_multi_calls_both_sources_when_both_have_items() {
     // Verify that when BOTH sources have selected items, BOTH executes are called
     const MULTI_MODE_BOTH: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         both = {
             description = "Test task",
@@ -374,7 +374,7 @@ fn empty_source_execute_not_called() {
     // Verify execute is NOT called when a source has no items
     const EMPTY_SOURCE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         empty = {
             description = "Test task",
@@ -442,7 +442,7 @@ fn all_sources_empty_no_executes_called() {
     // Verify when ALL sources are empty, NO executes are called
     const ALL_EMPTY: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         all_empty = {
             description = "Test task",
@@ -501,7 +501,7 @@ fn multiple_items_same_source_single_execute_call() {
     // Verify that selecting multiple items from the SAME source calls execute ONCE with all items
     const MULTI_ITEMS_SINGLE_SOURCE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         multi = {
             description = "Test task",
@@ -565,7 +565,7 @@ fn single_source_task_execute_called_normally() {
     // Verify single-source tasks continue to work correctly (no tag filtering)
     const SINGLE_SOURCE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         single = {
             description = "Test task",
@@ -620,7 +620,7 @@ fn all_sources_with_items_execute() {
     // NOTE: Execution order is not guaranteed (HashMap iteration order varies)
     const ORDERED_SOURCES: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         ordered = {
             description = "Test task",
@@ -688,7 +688,7 @@ fn first_nonzero_exit_code_propagated_with_selective_execution() {
     // Verify exit code propagation works correctly when only some sources execute
     const MIXED_EXIT_CODES: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         mixed = {
             description = "Test task",

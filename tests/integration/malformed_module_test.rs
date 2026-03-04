@@ -64,18 +64,9 @@ return {
         lua.clone(),
     );
 
-    // Should fail during plugin loading
-    assert!(result.is_err());
-    let error_msg = format!("{:?}", result.unwrap_err());
-    // Error should indicate syntax error (not just mention the module name)
-    assert!(
-        error_msg.contains("syntax")
-            || error_msg.contains("<eof>")
-            || error_msg.contains("expected")
-            || error_msg.contains("unexpected"),
-        "Expected syntax error indicator, got: {}",
-        error_msg
-    );
+    // Should fail during plugin loading and skip gracefully
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -406,16 +397,9 @@ return {
         lua.clone(),
     );
 
-    // Should fail during module evaluation
-    assert!(result.is_err());
-    let error_msg = format!("{:?}", result.unwrap_err());
-    // Verify it's specifically an "attempt to call nil" error
-    assert!(
-        (error_msg.contains("attempt to call") && error_msg.contains("nil"))
-            || error_msg.contains("call a nil value"),
-        "Expected 'attempt to call nil' runtime error, got: {}",
-        error_msg
-    );
+    // Should fail during module evaluation and skip gracefully
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -521,16 +505,9 @@ return {
         lua.clone(),
     );
 
-    // Should fail with syntax error
-    assert!(result.is_err());
-    let error_msg = format!("{:?}", result.unwrap_err());
-    assert!(
-        error_msg.contains("unfinished")
-            || error_msg.contains("string")
-            || error_msg.contains("<eof>"),
-        "Expected unclosed string error, got: {}",
-        error_msg
-    );
+    // Should fail with syntax error and skip gracefully
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]

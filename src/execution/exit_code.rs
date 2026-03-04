@@ -1,3 +1,8 @@
+/// Standard exit code constants
+pub const EXIT_SUCCESS: i32 = 0;
+pub const EXIT_FAILURE: i32 = 1;
+pub const EXIT_SIGINT: i32 = 130;
+
 /// Clamps exit codes to POSIX-compliant range (0-255).
 ///
 /// POSIX standards require exit codes to be in the range 0-255.

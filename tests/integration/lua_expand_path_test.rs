@@ -800,18 +800,10 @@ return {
 
     let result = load_plugins(&[plugin_dir], &config, lua);
 
-    assert!(
-        result.is_err(),
-        "Expected plugin to fail loading with module-level relative path"
-    );
-    let error_msg = result.unwrap_err().to_string();
-    assert!(
-        error_msg.contains("no plugin context")
-            || error_msg.contains("Cannot resolve relative path")
-            || error_msg.contains("Failed to peek plugin"),
-        "Expected error about missing plugin context during peek/load, got: {}",
-        error_msg
-    );
+    // Desired behavior: plugin with module-level expand_path error is skipped gracefully
+    let plugins =
+        result.expect("Should gracefully skip plugin with module-level expand_path error");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]

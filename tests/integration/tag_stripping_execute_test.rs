@@ -32,7 +32,7 @@ confirm = "<enter>"
 
 const TWO_SOURCE_BASIC: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         dual = {
             description = "Test task",
@@ -72,7 +72,7 @@ return {
 
 const THREE_SOURCE_MIXED: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         triple = {
             description = "Test task",
@@ -108,7 +108,7 @@ return {
 
 const FOUR_SOURCE_COMPLEX: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         quad = {
             description = "Test task",
@@ -127,7 +127,7 @@ return {
 
 const NO_SPACE_AFTER_BRACKET: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         nospace = {
             description = "Test task",
@@ -149,7 +149,7 @@ return {
 
 const BRACKETS_IN_CONTENT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         brackets = {
             description = "Test task",
@@ -177,7 +177,7 @@ return {
 
 const UNICODE_CONTENT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         unicode = {
             description = "Test task",
@@ -206,7 +206,7 @@ return {
 
 const EMPTY_AND_WHITESPACE: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         edge = {
             description = "Test task",
@@ -234,7 +234,7 @@ return {
 
 const LONG_ITEM_NAMES: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         long = {
             description = "Test task",
@@ -407,7 +407,7 @@ fn test_empty_items_handled() {
     // This is the CORRECT behavior after the fix - empty sources should skip execution
     const EMPTY_ITEMS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         empty = {
             description = "Test task",
@@ -509,7 +509,7 @@ fn test_items_received_match_items_returned() {
     // Verify exact match: items() output → tag → strip → execute() input
     const EXACT_MATCH: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         exact = {
             description = "Test task",
@@ -558,7 +558,7 @@ fn test_special_characters_preserved() {
     // Verify special characters in items are preserved exactly
     const SPECIAL_CHARS: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         special = {
             description = "Test task",
@@ -609,7 +609,7 @@ fn test_mixed_content_types() {
     // Verify numbers, symbols, and letters all work
     const MIXED: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         mixed = {
             description = "Test task",
@@ -655,7 +655,7 @@ fn test_sources_execute_independently() {
     // Verify each source's execute only receives its own items
     const INDEPENDENT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         independent = {
             description = "Test task",
@@ -717,7 +717,7 @@ fn test_source_routing_by_tag() {
     // Verify tags route items to correct execute functions
     const ROUTING: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         routing = {
             description = "Test task",
@@ -769,7 +769,7 @@ fn test_mixed_preselection_strips_tags() {
     // Verify preselection works correctly with tag stripping
     const PRESELECT: &str = r#"
 return {
-    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos"}},
+    metadata = {name = "test", version = "1.0.0", icon = "T", platforms = {"macos", "linux"}},
     tasks = {
         preselect = {
             description = "Test task",

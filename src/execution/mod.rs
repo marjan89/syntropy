@@ -5,7 +5,7 @@ pub mod runner;
 
 use std::sync::Arc;
 
-pub use exit_code::clamp_exit_code;
+pub use exit_code::{EXIT_FAILURE, EXIT_SIGINT, EXIT_SUCCESS, clamp_exit_code};
 pub use handle::{ExecutionResult, Handle, Operation, State};
 pub(crate) use lua::{
     call_item_source_execute, call_item_source_preselected_items, call_item_source_preview,

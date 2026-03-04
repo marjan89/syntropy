@@ -267,7 +267,7 @@ return {
     metadata = {
         description = "Test task",
         name = "arrays",
-        platforms = {"linux"},
+        platforms = {"macos", "linux"},
     },
     tasks = {t = {description = "Test task", execute = function() return "", 0 end}}
 }
@@ -277,9 +277,8 @@ return {
 
     // Array merge works correctly - override replaces base
     // Verified: deep_merge() properly detects arrays and replaces them
-    assert_eq!(plugins[0].metadata.platforms, vec!["linux"]);
-    // Verify base values (macos, windows) are NOT present - array was replaced, not merged
-    assert!(!plugins[0].metadata.platforms.contains(&"macos".to_string()));
+    assert_eq!(plugins[0].metadata.platforms, vec!["macos", "linux"]);
+    // Verify base value (windows) is NOT present - array was replaced, not merged
     assert!(
         !plugins[0]
             .metadata
@@ -689,16 +688,18 @@ return {
         version = "1.0.0",  -- Missing closing brace
 "#;
 
+    // With graceful degradation, syntax errors are skipped rather than failing hard
     let result = load_plugin_from_string(SYNTAX_ERROR);
-    assert!(result.is_err());
-    // Error message may vary (could be peek failure, syntax error, etc.)
-    // Just verify it fails
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
+    // Plugin is skipped with warning (tested in plugin_loading_graceful_degradation_test)
 }
 
 #[test]
 fn test_missing_metadata_table() {
     let result = load_plugin_from_string(r#"return {tasks = {}}"#);
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -708,7 +709,8 @@ fn test_missing_tasks_table() {
 return {metadata = {name = "test", version = "1.0.0"}}
 "#,
     );
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -721,7 +723,8 @@ return {
 }
 "#,
     );
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -734,7 +737,8 @@ return {
 }
 "#,
     );
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -747,7 +751,8 @@ return {
 }
 "#,
     );
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
     // Just verify validation fails for multi-char icon
 }
 
@@ -761,7 +766,8 @@ return {
 }
 "#,
     );
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -781,7 +787,8 @@ return {
 }
 "#,
     );
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -799,7 +806,8 @@ return {
 }
 "#,
     );
-    assert!(result.is_err());
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -812,12 +820,9 @@ return {
 }
 "#,
     );
-    // Expected behavior: platforms as string should fail type validation
-    // Current behavior: mlua coerces string to empty array, no error
-    assert!(
-        result.is_err(),
-        "platforms field should be array, not string"
-    );
+    // Desired behavior: platforms as string should be skipped gracefully
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 // ============================================================================
@@ -942,12 +947,9 @@ return {
 }
 "#,
     );
-    // Expected behavior: Plugin with no tasks should fail validation
-    // Current behavior: Empty tasks table is accepted
-    assert!(
-        result.is_err(),
-        "Plugin with empty tasks should fail validation"
-    );
+    // Desired behavior: Plugin with no tasks should be skipped gracefully
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
@@ -1560,11 +1562,264 @@ return {
         lua,
     );
 
-    // Should fail because override can't be identified for merging
-    // The loader peeks metadata.name to detect duplicates
-    // Without name in override, it can't match with base plugin
-    assert!(
-        result.is_err(),
-        "Override plugin without metadata.name should fail to merge"
+    // Desired behavior: override without name is skipped gracefully,
+    // base plugin still loads
+    let plugins = result.expect("Should gracefully skip invalid override");
+    assert_eq!(plugins.len(), 1, "Should load base plugin only");
+    assert_eq!(plugins[0].metadata.name, "test");
+    assert_eq!(plugins[0].metadata.version, "1.0.0"); // Base version, not override
+}
+
+// ============================================================================
+// Graceful Degradation Tests (Platform Incompatibility)
+// ============================================================================
+
+#[test]
+fn test_platform_incompatible_plugin_skipped_gracefully() {
+    // Verifies that when multiple plugins exist and one is platform-incompatible,
+    // the compatible plugins load successfully and the incompatible one is skipped
+
+    let fixture = TestFixture::new();
+
+    // Plugin 1: Compatible with current platform (no platform restriction)
+    fixture.create_plugin(
+        "universal",
+        r#"
+return {
+    metadata = {name = "universal", version = "1.0.0"},
+    tasks = {t = {description = "Universal task", execute = function() return "works", 0 end}}
+}
+"#,
     );
+
+    // Plugin 2: Only compatible with Linux (will be incompatible on macOS/Windows)
+    fixture.create_plugin(
+        "linux-only",
+        r#"
+return {
+    metadata = {name = "linux-only", version = "1.0.0", platforms = {"linux"}},
+    tasks = {t = {description = "Linux task", execute = function() return "linux", 0 end}}
+}
+"#,
+    );
+
+    // Plugin 3: Compatible with macOS (will be compatible on macOS, incompatible on Linux/Windows)
+    fixture.create_plugin(
+        "macos-tools",
+        r#"
+return {
+    metadata = {name = "macos-tools", version = "1.0.0", platforms = {"macos"}},
+    tasks = {t = {description = "macOS task", execute = function() return "macos", 0 end}}
+}
+"#,
+    );
+
+    let lua = Arc::new(Mutex::new(create_lua_vm().unwrap()));
+    let config = Config::default();
+
+    let plugins = load_plugins(
+        &[fixture.data_path().join("syntropy").join("plugins")],
+        &config,
+        lua,
+    )
+    .expect("Should load compatible plugins gracefully");
+
+    // Should have 2 plugins on macOS (universal + macos-tools)
+    // or 2 plugins on Linux (universal + linux-only)
+    // or 1 plugin on Windows (universal only)
+    assert!(
+        !plugins.is_empty(),
+        "Should load at least the universal plugin"
+    );
+    assert!(
+        plugins.len() <= 2,
+        "Should not load all 3 plugins (one is always incompatible)"
+    );
+
+    // Verify universal plugin always loads
+    assert!(
+        plugins.iter().any(|p| p.metadata.name == "universal"),
+        "Universal plugin should always load"
+    );
+
+    // Verify incompatible plugin is not loaded
+    #[cfg(target_os = "macos")]
+    {
+        assert_eq!(plugins.len(), 2, "macOS should load 2 plugins");
+        assert!(
+            plugins.iter().any(|p| p.metadata.name == "macos-tools"),
+            "macOS should load macos-tools"
+        );
+        assert!(
+            !plugins.iter().any(|p| p.metadata.name == "linux-only"),
+            "macOS should not load linux-only"
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        assert_eq!(plugins.len(), 2, "Linux should load 2 plugins");
+        assert!(
+            plugins.iter().any(|p| p.metadata.name == "linux-only"),
+            "Linux should load linux-only"
+        );
+        assert!(
+            !plugins.iter().any(|p| p.metadata.name == "macos-tools"),
+            "Linux should not load macos-tools"
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        assert_eq!(plugins.len(), 1, "Windows should load 1 plugin");
+        assert!(
+            !plugins.iter().any(|p| p.metadata.name == "linux-only"),
+            "Windows should not load linux-only"
+        );
+        assert!(
+            !plugins.iter().any(|p| p.metadata.name == "macos-tools"),
+            "Windows should not load macos-tools"
+        );
+    }
+}
+
+#[test]
+fn test_all_plugins_incompatible_returns_empty() {
+    // Verifies that if all plugins are platform-incompatible, load_plugins returns empty list
+
+    let fixture = TestFixture::new();
+
+    // Create plugins that don't support current platform
+    #[cfg(target_os = "macos")]
+    {
+        fixture.create_plugin(
+            "linux-only",
+            r#"
+return {
+    metadata = {name = "linux-only", version = "1.0.0", platforms = {"linux"}},
+    tasks = {t = {description = "Linux task", execute = function() return "linux", 0 end}}
+}
+"#,
+        );
+
+        fixture.create_plugin(
+            "windows-only",
+            r#"
+return {
+    metadata = {name = "windows-only", version = "1.0.0", platforms = {"windows"}},
+    tasks = {t = {description = "Windows task", execute = function() return "windows", 0 end}}
+}
+"#,
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        fixture.create_plugin(
+            "macos-only",
+            r#"
+return {
+    metadata = {name = "macos-only", version = "1.0.0", platforms = {"macos"}},
+    tasks = {t = {description = "macOS task", execute = function() return "macos", 0 end}}
+}
+"#,
+        );
+
+        fixture.create_plugin(
+            "windows-only",
+            r#"
+return {
+    metadata = {name = "windows-only", version = "1.0.0", platforms = {"windows"}},
+    tasks = {t = {description = "Windows task", execute = function() return "windows", 0 end}}
+}
+"#,
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        fixture.create_plugin(
+            "macos-only",
+            r#"
+return {
+    metadata = {name = "macos-only", version = "1.0.0", platforms = {"macos"}},
+    tasks = {t = {description = "macOS task", execute = function() return "macos", 0 end}}
+}
+"#,
+        );
+
+        fixture.create_plugin(
+            "linux-only",
+            r#"
+return {
+    metadata = {name = "linux-only", version = "1.0.0", platforms = {"linux"}},
+    tasks = {t = {description = "Linux task", execute = function() return "linux", 0 end}}
+}
+"#,
+        );
+    }
+
+    let lua = Arc::new(Mutex::new(create_lua_vm().unwrap()));
+    let config = Config::default();
+
+    let plugins = load_plugins(
+        &[fixture.data_path().join("syntropy").join("plugins")],
+        &config,
+        lua,
+    )
+    .expect("Should succeed but return empty list");
+
+    assert_eq!(
+        plugins.len(),
+        0,
+        "Should return empty list when all plugins are incompatible"
+    );
+}
+
+#[test]
+fn test_malformed_plugin_gracefully_degraded() {
+    // Verifies that graceful degradation applies to malformed plugins
+    // (missing metadata fields), allowing valid plugins to still load
+
+    let fixture = TestFixture::new();
+
+    // Valid plugin
+    fixture.create_plugin(
+        "valid",
+        r#"
+return {
+    metadata = {name = "valid", version = "1.0.0"},
+    tasks = {t = {description = "Valid task", execute = function() return "ok", 0 end}}
+}
+"#,
+    );
+
+    // Malformed plugin (missing version)
+    fixture.create_plugin(
+        "malformed",
+        r#"
+return {
+    metadata = {name = "malformed"},
+    tasks = {t = {description = "Test task", execute = function() return "fail", 0 end}}
+}
+"#,
+    );
+
+    let lua = Arc::new(Mutex::new(create_lua_vm().unwrap()));
+    let config = Config::default();
+
+    let result = load_plugins(
+        &[fixture.data_path().join("syntropy").join("plugins")],
+        &config,
+        lua,
+    );
+
+    // Should gracefully skip malformed plugin and load valid one
+    let plugins = result.expect("Should gracefully skip malformed plugin");
+    assert_eq!(
+        plugins.len(),
+        1,
+        "Should load 1 valid plugin, skipping malformed one"
+    );
+    assert_eq!(plugins[0].metadata.name, "valid");
 }

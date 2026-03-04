@@ -532,15 +532,8 @@ return {
         lua.clone(),
     );
 
-    assert!(result.is_err());
-    let error = result.unwrap_err();
-    let error_msg = format!("{:?}", error); // Use Debug format to see the full error chain
-    // The error should mention either the failed peek or the missing module
-    assert!(
-        error_msg.contains("nonexistent_module") || error_msg.contains("Failed to peek plugin"),
-        "Expected error about nonexistent module or failed peek, got: {}",
-        error_msg
-    );
+    let plugins = result.expect("Should gracefully skip invalid plugin");
+    assert_eq!(plugins.len(), 0, "Should have no plugins loaded");
 }
 
 #[test]
