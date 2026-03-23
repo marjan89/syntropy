@@ -3,7 +3,7 @@ name: PR Quality Gate
 on:
   pull_request:
     branches:
-      - develop
+      - main
 
 permissions:
   contents: read
