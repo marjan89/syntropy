@@ -207,20 +207,25 @@ syntropy [OPTIONS] [COMMAND]
 
 The `execute` subcommand supports additional flags for scripting, debugging, and integration:
 
-| Flag                             | Description                                 | Example                          |
-| -------------------------------- | ------------------------------------------- | -------------------------------- |
-| `--items <NAMES>`                | Execute on specific items (comma-separated) | `--items "git,npm,curl"`         |
-| `--preview <ITEM>`               | Generate preview for a single item          | `--preview "Safari"`             |
-| `--produce-items`                | Output all available items (one per line)   | `--produce-items > items.txt`    |
-| `--produce-preselected-items`    | Output preselected items                    | `--produce-preselected-items`    |
-| `--produce-preselection-matches` | Output items that match preselection        | `--produce-preselection-matches` |
+| Flag                             | Description                                                                 | Example                          |
+| -------------------------------- | --------------------------------------------------------------------------- | -------------------------------- |
+| `--items <NAMES>`                | Execute on specific items (comma-separated; escape commas with `\,`)        | `--items "git,npm,curl"`         |
+| `--preview <ITEM>`               | Generate preview for a single item; supports fuzzy matching (case-insensitive, tag-stripped fallback) | `--preview "Safari"`             |
+| `--produce-items`                | Output all available items (one per line)                                   | `--produce-items > items.txt`    |
+| `--produce-preselected-items`    | Output items returned by the task's `preselected_items()` function          | `--produce-preselected-items`    |
+| `--produce-preselection-matches` | Output the intersection of available items and preselected items            | `--produce-preselection-matches` |
 
 **Note:** These flags are mutually exclusive - you can only use one at a time.
+
+> **Streaming previews:** The TUI's `preview_polling_interval` refreshes the preview pane live as content changes. There is no CLI equivalent — `--preview` is a single-shot call. For polling behaviour in scripts, use `watch syntropy execute --plugin P --task T --preview ITEM`.
 
 ### Commands
 
 | Command                    | Description                                                      |
 | -------------------------- | ---------------------------------------------------------------- |
+| `list`                     | List all loaded plugins with version and description             |
+| `list --plugin <NAME>`     | List all tasks for a plugin (key, description, mode, source count) |
+| `list --plugin <NAME> --task <KEY>` | Show full detail for a specific task                  |
 | `init`                     | Initialize plugin development environment                        |
 | `completions <SHELL>`      | Generate shell completions (zsh, bash, fish, powershell, elvish) |
 | `validate --plugin <PATH>` | Validate plugin structure                                        |

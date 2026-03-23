@@ -5,6 +5,8 @@
 mod case_sensitivity_test;
 mod circular_dependency_test;
 mod cli_execute_test;
+mod cli_init_test;
+mod cli_list_test;
 mod colors_loading_test;
 mod config_validation_test;
 mod exit_code_integration_test;

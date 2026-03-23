@@ -1,11 +1,22 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use crate::plugins::TaskMap;
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum Mode {
     Multi,
     #[default]
     None,
+}
+
+impl fmt::Display for Mode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Mode::Multi => write!(f, "multi"),
+            Mode::None => write!(f, "none"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
