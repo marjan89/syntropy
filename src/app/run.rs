@@ -12,6 +12,7 @@ use crate::{
         execute::execute_task_cli,
         handle_plugins_command,
         init::create_plugin_scaffold,
+        list_cli,
         validate::{validate_config_cli, validate_plugin_cli},
     },
     configs::{
@@ -86,6 +87,11 @@ fn setup_the_environment_and_run(cli_args: &Args) -> Result<()> {
         .context("Failed to load plugins")?;
 
     let app = App::new(config, plugins, lua_runtime);
+
+    if let Some(Commands::List(list_args)) = &cli_args.command {
+        return list_cli(&app, list_args);
+    }
+
     let runtime = Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -202,8 +208,8 @@ fn handle_cli_commands(command: &Option<Commands>, cli_args: &Args) -> Result<bo
         return Ok(false);
     };
     match command {
-        Commands::Execute(_) => {
-            // Execute requires full environment setup, handle in setup_the_environment_and_run
+        Commands::Execute(_) | Commands::List(_) => {
+            // These require full environment setup (plugins loaded), handle in setup_the_environment_and_run
             Ok(false)
         }
         Commands::Init => {

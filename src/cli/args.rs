@@ -92,6 +92,22 @@ pub struct PluginsArgs {
     pub plugin: Option<String>,
 }
 
+/// Arguments for the `list` subcommand.
+///
+/// - No flags: lists all loaded plugins with version and description
+/// - `--plugin NAME`: lists all task keys and descriptions for that plugin
+/// - `--plugin NAME --task KEY`: shows full details of a specific task
+#[derive(ClapArgs, Debug)]
+pub struct ListArgs {
+    /// Plugin to inspect. Omit to list all loaded plugins.
+    #[arg(long, value_name = "NAME")]
+    pub plugin: Option<String>,
+
+    /// Task key to inspect (requires --plugin). Omit to list all tasks in the plugin.
+    #[arg(long, value_name = "KEY", requires = "plugin")]
+    pub task: Option<String>,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Execute a task directly without launching TUI
@@ -117,6 +133,9 @@ pub enum Commands {
         #[arg(long, value_name = "PATH", num_args = 0..=1, conflicts_with = "plugin")]
         config: Option<Vec<PathBuf>>,
     },
+
+    /// List loaded plugins, tasks for a plugin, or details of a specific task
+    List(ListArgs),
 
     /// Manage plugins (install, remove, upgrade, list)
     ///
