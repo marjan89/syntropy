@@ -173,6 +173,10 @@ syntropy
 ### Run Tasks from CLI
 
 ```bash
+# Discover plugins and tasks
+syntropy list
+syntropy list --plugin packages
+
 # Execute task directly (for scripts/cron)
 syntropy execute --plugin packages --task export
 
