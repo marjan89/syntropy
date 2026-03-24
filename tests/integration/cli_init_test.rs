@@ -227,6 +227,67 @@ fn test_init_creates_all_api_reference_sections() {
 }
 
 // ============================================================================
+// Doc completeness
+// ============================================================================
+
+#[test]
+fn test_init_copies_all_docs() {
+    let fixture = TestFixture::new();
+
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .env("XDG_CONFIG_HOME", fixture.config_path())
+        .arg("init")
+        .assert()
+        .success();
+
+    let source_docs = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("docs");
+    let output_docs = fixture.config_path().join("syntropy").join("docs");
+
+    let source_files: Vec<_> = std::fs::read_dir(&source_docs)
+        .expect("docs/ directory should exist in project root")
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name())
+        .collect();
+
+    assert!(
+        !source_files.is_empty(),
+        "docs/ directory should contain files"
+    );
+
+    for name in &source_files {
+        assert!(
+            output_docs.join(name).is_file(),
+            "{} is in docs/ but was not copied by init",
+            name.to_string_lossy()
+        );
+    }
+}
+
+#[test]
+fn test_init_copies_readme() {
+    let fixture = TestFixture::new();
+
+    Command::new(assert_cmd::cargo::cargo_bin!("syntropy"))
+        .env("XDG_CONFIG_HOME", fixture.config_path())
+        .arg("init")
+        .assert()
+        .success();
+
+    let readme = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md");
+    assert!(readme.exists(), "README.md should exist in project root");
+
+    assert!(
+        fixture
+            .config_path()
+            .join("syntropy")
+            .join("docs")
+            .join("README.md")
+            .is_file(),
+        "README.md should be copied to docs/ by init"
+    );
+}
+
+// ============================================================================
 // Output
 // ============================================================================
 

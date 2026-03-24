@@ -14,6 +14,7 @@ const LUARC_JSON_FILE: &str = ".luarc.json";
 const PLUGIN_LUA_FILE: &str = "plugin.lua";
 
 // Doc file names
+const README_FILE: &str = "README.md";
 const PLUGINS_MD_FILE: &str = "plugins.md";
 const CONFIG_REFERENCE_FILE: &str = "config-reference.md";
 const API_REFERENCE_FILE: &str = "plugin-api-reference.md";
@@ -32,6 +33,7 @@ const LUARC_JSON_TEMPLATE: &str = include_str!("../../scaffold_templates/.luarc.
 const PLUGIN_LUA_TEMPLATE: &str = include_str!("../../scaffold_templates/plugin.lua");
 
 // Embedded doc contents
+const README_CONTENT: &str = include_str!("../../README.md");
 const PLUGINS_MD_CONTENT: &str = include_str!("../../docs/plugins.md");
 const CONFIG_REFERENCE_CONTENT: &str = include_str!("../../docs/config-reference.md");
 const API_REFERENCE_CONTENT: &str = include_str!("../../docs/plugin-api-reference.md");
@@ -105,6 +107,7 @@ fn initialize_docs_directory(base_dir: &Path) -> Result<Vec<&'static str>> {
         .with_context(|| format!("Failed to create docs directory at {}", docs_dir.display()))?;
 
     let files_to_write = [
+        (README_FILE, docs_dir.join(README_FILE)),
         (PLUGINS_MD_FILE, docs_dir.join(PLUGINS_MD_FILE)),
         (CONFIG_REFERENCE_FILE, docs_dir.join(CONFIG_REFERENCE_FILE)),
         (API_REFERENCE_FILE, docs_dir.join(API_REFERENCE_FILE)),
@@ -130,6 +133,7 @@ fn initialize_docs_directory(base_dir: &Path) -> Result<Vec<&'static str>> {
         .map(|(name, _)| *name)
         .collect();
 
+    write_template(README_CONTENT, &docs_dir.join(README_FILE))?;
     write_template(PLUGINS_MD_CONTENT, &docs_dir.join(PLUGINS_MD_FILE))?;
     write_template(
         CONFIG_REFERENCE_CONTENT,
@@ -207,6 +211,7 @@ Created files in plugins/:
   - {} (plugin type definitions)
 
 Created files in docs/:
+  - {} (readme / quick start)
   - {} (plugin authoring guide)
   - {} (configuration reference)
   - {} (API reference index)
@@ -223,6 +228,7 @@ Note: Installed plugins will be placed in ~/.local/share/syntropy/plugins/",
         SYNTROPY_LUA_FILE,
         LUARC_JSON_FILE,
         PLUGIN_LUA_FILE,
+        README_FILE,
         PLUGINS_MD_FILE,
         CONFIG_REFERENCE_FILE,
         API_REFERENCE_FILE,

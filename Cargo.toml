@@ -1,6 +1,6 @@
 [package]
 name = "syntropy"
-version = "0.4.6"
+version = "0.4.7"
 edition = "2024"
 description = "Syntropy is a TUI tool boasting a fleshed out, neovim like, plugin framework. It's mainly envisioned to work with handling data, maintenance tasks, etc. It also supports a CLI tools for use with scripting. If you wire it up with a hotkey it can replace your dmenu too!"
 repository = "https://github.com/marjan89/syntropy"
