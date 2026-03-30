@@ -20,14 +20,13 @@
 - **Configurable** - Keybindings, themes, and behavior via TOML config
 - **XDG compliant** - Follows XDG Base Directory Specification
 
-## Screenshots
+## Demo
 
-![Syntropy TUI - Plugin List](screenshots/screenshot_1.png)
+![Syntropy TUI Demo](screenshots/demo.gif)
 
-<p align="center">
-  <img src="screenshots/screenshot_2.png" width="49%" alt="Application Switcher with Preview" />
-  <img src="screenshots/screenshot_3.png" width="49%" alt="Emoji Picker Plugin" />
-</p>
+If you miss [dmenu](https://github.com/aario/dmenu) on macOS syntropy was designed to fill in the void. Quick launch plugins as drop down menus with hotkeys. See [recipes](/docs/recipes.md) for setup details.
+
+![Syntropy + dmenu](screenshots/demo_dmenu.gif)
 
 ## Table of Contents
 
@@ -83,6 +82,7 @@ syntropy init
 **Start here:** Browse the [Available Plugins](docs/available-plugins.md) catalog to discover community plugins for common tasks like package management, backups, window switching, and more.
 
 **Quick workflow:**
+
 1. Browse the [Available Plugins](docs/available-plugins.md) catalog
 2. Copy the plugin config snippet from the catalog
 3. Add it to your `~/.config/syntropy/config.toml`
@@ -90,8 +90,8 @@ syntropy init
 
 #### Plugin Types
 
-| Type                | Location                       | Managed By                          |
-| ------------------- | ------------------------------ | ----------------------------------- |
+| Type                | Location                           | Managed By                          |
+| ------------------- | ---------------------------------- | ----------------------------------- |
 | **User plugins**    | `~/.config/syntropy/plugins/`      | Manual (you)                        |
 | **Managed plugins** | `~/.local/share/syntropy/plugins/` | Plugin manager (git)                |
 | **Orphan plugins**  | `~/.local/share/syntropy/plugins/` | None (leftover from removed config) |
@@ -199,8 +199,8 @@ syntropy [OPTIONS] [COMMAND]
 
 ### Main Options
 
-| Flag              | Description                                 | Example                                                        |
-| ----------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| Flag              | Description                                 | Example                                                            |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------------------ |
 | `--config <PATH>` | Use custom config file                      | `syntropy --config ~/my-config.toml`                               |
 | `--plugin <NAME>` | Select plugin to use                        | `syntropy --plugin packages`                                       |
 | `--task <NAME>`   | Select task within plugin                   | `syntropy --task export`                                           |
@@ -211,13 +211,13 @@ syntropy [OPTIONS] [COMMAND]
 
 The `execute` subcommand supports additional flags for scripting, debugging, and integration:
 
-| Flag                             | Description                                                                 | Example                          |
-| -------------------------------- | --------------------------------------------------------------------------- | -------------------------------- |
-| `--items <NAMES>`                | Execute on specific items (comma-separated; escape commas with `\,`)        | `--items "git,npm,curl"`         |
+| Flag                             | Description                                                                                           | Example                          |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `--items <NAMES>`                | Execute on specific items (comma-separated; escape commas with `\,`)                                  | `--items "git,npm,curl"`         |
 | `--preview <ITEM>`               | Generate preview for a single item; supports fuzzy matching (case-insensitive, tag-stripped fallback) | `--preview "Safari"`             |
-| `--produce-items`                | Output all available items (one per line)                                   | `--produce-items > items.txt`    |
-| `--produce-preselected-items`    | Output items returned by the task's `preselected_items()` function          | `--produce-preselected-items`    |
-| `--produce-preselection-matches` | Output the intersection of available items and preselected items            | `--produce-preselection-matches` |
+| `--produce-items`                | Output all available items (one per line)                                                             | `--produce-items > items.txt`    |
+| `--produce-preselected-items`    | Output items returned by the task's `preselected_items()` function                                    | `--produce-preselected-items`    |
+| `--produce-preselection-matches` | Output the intersection of available items and preselected items                                      | `--produce-preselection-matches` |
 
 **Note:** These flags are mutually exclusive - you can only use one at a time.
 
@@ -225,16 +225,16 @@ The `execute` subcommand supports additional flags for scripting, debugging, and
 
 ### Commands
 
-| Command                    | Description                                                      |
-| -------------------------- | ---------------------------------------------------------------- |
-| `list`                     | List all loaded plugins with version and description             |
-| `list --plugin <NAME>`     | List all tasks for a plugin (key, description, mode, source count) |
-| `list --plugin <NAME> --task <KEY>` | Show full detail for a specific task                  |
-| `init`                     | Initialize plugin development environment                        |
-| `completions <SHELL>`      | Generate shell completions (zsh, bash, fish, powershell, elvish) |
-| `validate --plugin <PATH>` | Validate plugin structure                                        |
-| `validate --config [PATH]` | Validate config file (defaults to ~/.config/syntropy/config.toml)    |
-| `plugins`                  | Manage plugins (install, remove, upgrade, list) - See [Discovering & Installing Plugins](#discovering--installing-plugins) |
+| Command                             | Description                                                                                                                |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `list`                              | List all loaded plugins with version and description                                                                       |
+| `list --plugin <NAME>`              | List all tasks for a plugin (key, description, mode, source count)                                                         |
+| `list --plugin <NAME> --task <KEY>` | Show full detail for a specific task                                                                                       |
+| `init`                              | Initialize plugin development environment                                                                                  |
+| `completions <SHELL>`               | Generate shell completions (zsh, bash, fish, powershell, elvish)                                                           |
+| `validate --plugin <PATH>`          | Validate plugin structure                                                                                                  |
+| `validate --config [PATH]`          | Validate config file (defaults to ~/.config/syntropy/config.toml)                                                          |
+| `plugins`                           | Manage plugins (install, remove, upgrade, list) - See [Discovering & Installing Plugins](#discovering--installing-plugins) |
 
 ### Common Usage Patterns
 
@@ -398,8 +398,8 @@ syntropy completions elvish > ~/.config/elvish/lib/syntropy.elv
 
 ### Environment Variables
 
-| Variable          | Purpose                   | Example                          |
-| ----------------- | ------------------------- | -------------------------------- |
+| Variable          | Purpose                   | Example                              |
+| ----------------- | ------------------------- | ------------------------------------ |
 | `XDG_CONFIG_HOME` | Override config directory | `XDG_CONFIG_HOME=/tmp/test syntropy` |
 | `XDG_DATA_HOME`   | Override data directory   | `XDG_DATA_HOME=/tmp/data syntropy`   |
 
@@ -420,7 +420,7 @@ XDG_CONFIG_HOME=/tmp/test XDG_DATA_HOME=/tmp/data syntropy
 | Next item      | `↓`                  | Move selection down                                 |
 | Confirm        | `Enter`              | Execute selected item(s) or navigate into selection |
 | Back           | `Esc`                | Go back to previous screen                          |
-| Quit           | `Ctrl-c`             | Exit syntropy (hardcoded, not customizable)             |
+| Quit           | `Ctrl-c`             | Exit syntropy (hardcoded, not customizable)         |
 | **Selection**  |
 | Toggle select  | `Tab`                | Toggle item selection (multi-mode only)             |
 | **Preview**    |
